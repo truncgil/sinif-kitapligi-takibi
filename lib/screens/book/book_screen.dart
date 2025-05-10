@@ -191,6 +191,7 @@ class _BookScreenState extends State<BookScreen> {
     String author = '';
     String isbn = '';
     String barcode = '';
+    final TextEditingController barcodeController = TextEditingController();
 
     await showDialog(
       context: context,
@@ -215,8 +216,7 @@ class _BookScreenState extends State<BookScreen> {
               ),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'ISBN'),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'ISBN boş olamaz' : null,
+                initialValue: isbn,
                 onSaved: (value) => isbn = value ?? '',
               ),
               Row(
@@ -224,23 +224,18 @@ class _BookScreenState extends State<BookScreen> {
                   Expanded(
                     child: TextFormField(
                       decoration: const InputDecoration(labelText: 'Barkod'),
+                      controller: barcodeController,
                       validator: (value) =>
                           value?.isEmpty ?? true ? 'Barkod boş olamaz' : null,
                       onSaved: (value) => barcode = value ?? '',
-                      controller: TextEditingController(text: barcode),
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.qr_code_scanner),
                     onPressed: () async {
-                      final scannedBarcode =
-                          await _barcodeScannerService.scanBarcode();
-                      if (scannedBarcode.isNotEmpty) {
-                        setState(() {
-                          barcode = scannedBarcode;
-                        });
-                        formKey.currentState?.reset();
-                      }
+                      // Tarama ekranını aç
+                      Navigator.pop(context);
+                      _scanBarcodeAndAddBook();
                     },
                   ),
                 ],
@@ -257,53 +252,196 @@ class _BookScreenState extends State<BookScreen> {
             onPressed: () async {
               if (formKey.currentState?.validate() ?? false) {
                 formKey.currentState?.save();
-
                 try {
-                  // Önce barkodun benzersiz olup olmadığını kontrol et
-                  final existingBook =
-                      await _databaseService.getBookByBarcode(barcode);
-                  if (existingBook != null) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('Bu barkoda sahip bir kitap zaten mevcut!'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
-
                   final book = Book(
                     title: title,
                     author: author,
                     isbn: isbn,
                     barcode: barcode,
                   );
-
                   await _databaseService.insertBook(book);
                   _refreshBooks();
-
                   if (!mounted) return;
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Kitap başarıyla eklendi.'),
+                    SnackBar(
+                      content: Text('$title başarıyla eklendi'),
                       backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      margin: const EdgeInsets.all(8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   );
                 } catch (e) {
                   if (!mounted) return;
+                  Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Kitap eklenirken bir hata oluştu: $e'),
                       backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      margin: const EdgeInsets.all(8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   );
                 }
               }
             },
-            child: const Text('Kaydet'),
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _scanBarcodeAndAddBook() async {
+    try {
+      final scannedBarcode = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const BarcodeScannerPage(),
+        ),
+      );
+
+      if (scannedBarcode == null || scannedBarcode.isEmpty) {
+        // Tarama iptal edildi veya başarısız oldu
+        _showAddBookDialog(context);
+        return;
+      }
+
+      // Barkodu sistemde kontrol et
+      final existingBook =
+          await _databaseService.getBookByBarcode(scannedBarcode);
+
+      if (existingBook != null) {
+        // Kitap zaten var, kullanıcıya bildir
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Bu barkoda sahip bir kitap zaten sistemde mevcut: ${existingBook.title}'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+        _showAddBookDialog(context);
+      } else {
+        // Kitap yok, yeni kitap ekleme formunu göster
+        _showAddBookWithBarcode(context, scannedBarcode);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Barkod tarama işlemi sırasında bir hata oluştu: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+      _showAddBookDialog(context);
+    }
+  }
+
+  Future<void> _showAddBookWithBarcode(
+      BuildContext context, String barcode) async {
+    final formKey = GlobalKey<FormState>();
+    String title = '';
+    String author = '';
+    String isbn = '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Yeni Kitap Ekle'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Kitap Adı'),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Kitap adı boş olamaz' : null,
+                onSaved: (value) => title = value ?? '',
+                autofocus: true,
+              ),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Yazar'),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Yazar boş olamaz' : null,
+                onSaved: (value) => author = value ?? '',
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'Barkod: $barcode',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                formKey.currentState?.save();
+                try {
+                  final book = Book(
+                    title: title,
+                    author: author,
+                    isbn: isbn,
+                    barcode: barcode,
+                  );
+                  await _databaseService.insertBook(book);
+                  _refreshBooks();
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('$title başarıyla eklendi'),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      margin: const EdgeInsets.all(8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Kitap eklenirken bir hata oluştu: $e'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      margin: const EdgeInsets.all(8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Ekle'),
           ),
         ],
       ),
@@ -316,6 +454,8 @@ class _BookScreenState extends State<BookScreen> {
     String author = book.author;
     String isbn = book.isbn;
     String barcode = book.barcode;
+    final TextEditingController barcodeController =
+        TextEditingController(text: barcode);
 
     await showDialog(
       context: context,
@@ -343,8 +483,6 @@ class _BookScreenState extends State<BookScreen> {
               TextFormField(
                 decoration: const InputDecoration(labelText: 'ISBN'),
                 initialValue: isbn,
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'ISBN boş olamaz' : null,
                 onSaved: (value) => isbn = value ?? '',
               ),
               Row(
@@ -352,7 +490,7 @@ class _BookScreenState extends State<BookScreen> {
                   Expanded(
                     child: TextFormField(
                       decoration: const InputDecoration(labelText: 'Barkod'),
-                      initialValue: barcode,
+                      controller: barcodeController,
                       validator: (value) =>
                           value?.isEmpty ?? true ? 'Barkod boş olamaz' : null,
                       onSaved: (value) => barcode = value ?? '',
@@ -361,16 +499,141 @@ class _BookScreenState extends State<BookScreen> {
                   IconButton(
                     icon: const Icon(Icons.qr_code_scanner),
                     onPressed: () async {
-                      final scannedBarcode =
-                          await _barcodeScannerService.scanBarcode();
-                      if (scannedBarcode.isNotEmpty) {
-                        setState(() {
-                          barcode = scannedBarcode;
-                        });
+                      // Mevcut dialogu kapat
+                      Navigator.pop(context);
+
+                      // Barkod tarayıcıyı aç
+                      final scannedBarcode = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const BarcodeScannerPage(),
+                        ),
+                      );
+
+                      if (scannedBarcode != null && scannedBarcode.isNotEmpty) {
+                        // Tarama başarılı, editDialog'u yeniden aç ve barkodu güncelle
+                        barcode = scannedBarcode;
+                        _showEditBookDialogWithBarcode(context, book, barcode);
+                      } else {
+                        // Tarama başarısız, dialogu tekrar aç
+                        _showEditBookDialog(context, book);
                       }
                     },
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                formKey.currentState?.save();
+
+                try {
+                  // Barkod değiştiyse kontrol et
+                  if (barcode != book.barcode) {
+                    final existingBook =
+                        await _databaseService.getBookByBarcode(barcode);
+                    if (existingBook != null) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('Bu barkoda sahip bir kitap zaten mevcut!'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                  }
+
+                  final updatedBook = Book(
+                    id: book.id,
+                    title: title,
+                    author: author,
+                    isbn: isbn,
+                    barcode: barcode,
+                    isAvailable: book.isAvailable,
+                  );
+
+                  await _databaseService.updateBook(updatedBook);
+                  _refreshBooks();
+
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Kitap başarıyla güncellendi.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Kitap güncellenirken bir hata oluştu: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Güncelle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Taranan barkod ile düzenleme dialogunu yeniden aç
+  Future<void> _showEditBookDialogWithBarcode(
+      BuildContext context, Book book, String newBarcode) async {
+    final formKey = GlobalKey<FormState>();
+    String title = book.title;
+    String author = book.author;
+    String isbn = book.isbn;
+    String barcode = newBarcode;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kitap Düzenle'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Kitap Adı'),
+                initialValue: title,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Kitap adı boş olamaz' : null,
+                onSaved: (value) => title = value ?? '',
+              ),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Yazar'),
+                initialValue: author,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Yazar boş olamaz' : null,
+                onSaved: (value) => author = value ?? '',
+              ),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'ISBN'),
+                initialValue: isbn,
+                onSaved: (value) => isbn = value ?? '',
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'Barkod: $barcode',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),

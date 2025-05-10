@@ -4,12 +4,17 @@ import '../../models/student.dart';
 import '../../models/book.dart';
 import '../../models/borrow_record.dart';
 import '../../services/database/database_service.dart';
-import '../../services/barcode_scanner/barcode_scanner_service.dart';
 import '../../providers/library_provider.dart';
+import '../barcode_scanner/barcode_scanner_page.dart';
 
 /// Kitap ödünç verme ekranı
 class BorrowScreen extends StatefulWidget {
-  const BorrowScreen({super.key});
+  final String? initialBarcode;
+
+  const BorrowScreen({
+    super.key,
+    this.initialBarcode,
+  });
 
   @override
   State<BorrowScreen> createState() => _BorrowScreenState();
@@ -18,7 +23,6 @@ class BorrowScreen extends StatefulWidget {
 class _BorrowScreenState extends State<BorrowScreen> {
   Student? selectedStudent;
   Book? selectedBook;
-  final _barcodeScannerService = BarcodeScannerService();
   late DatabaseService _databaseService;
   late Future<List<Student>> _studentsFuture;
   late Future<List<Book>> _availableBooksFuture;
@@ -28,6 +32,11 @@ class _BorrowScreenState extends State<BorrowScreen> {
     super.initState();
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _refreshData();
+
+    // Eğer başlangıç barkodu varsa, o kitabı seç
+    if (widget.initialBarcode != null && widget.initialBarcode!.isNotEmpty) {
+      _loadBookByBarcode(widget.initialBarcode!);
+    }
   }
 
   void _refreshData() {
@@ -37,24 +46,38 @@ class _BorrowScreenState extends State<BorrowScreen> {
     });
   }
 
+  Future<void> _loadBookByBarcode(String barcode) async {
+    try {
+      final book = await _databaseService.getBookByBarcode(barcode);
+      if (book != null && book.isAvailable) {
+        setState(() {
+          selectedBook = book;
+        });
+      } else {
+        if (!mounted) return;
+        _showErrorMessage(
+          book == null
+              ? 'Kitap bulunamadı'
+              : 'Bu kitap şu anda ödünç verilmiş durumda',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorMessage('Kitap yüklenirken hata oluştu: $e');
+    }
+  }
+
   Future<void> _scanBarcode() async {
     try {
-      final barcode = await _barcodeScannerService.scanBarcode();
-      if (barcode.isNotEmpty) {
-        final book = await _databaseService.getBookByBarcode(barcode);
-        if (book != null && book.isAvailable) {
-          setState(() {
-            selectedBook = book;
-          });
-        } else {
-          if (!mounted) return;
-          _showErrorMessage(
-            book == null
-                ? 'Kitap bulunamadı'
-                : 'Bu kitap şu anda ödünç verilmiş durumda',
-          );
-        }
-      }
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const BarcodeScannerPage(),
+        ),
+      );
+
+      // Barkod tarayıcıdan döndükten sonra verileri yeniliyoruz
+      _refreshData();
     } catch (e) {
       if (!mounted) return;
       _showErrorMessage('Barkod okuma işlemi başarısız oldu: $e');
@@ -81,7 +104,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF04BF61),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(8),
         shape: RoundedRectangleBorder(
@@ -128,7 +151,10 @@ class _BorrowScreenState extends State<BorrowScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kitap Ödünç Ver'),
+        title: const Text(
+          'Kitap Ödünç Ver',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -136,17 +162,30 @@ class _BorrowScreenState extends State<BorrowScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Öğrenci Seç',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.person,
+                          color: Color(0xFF04BF61),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Öğrenci Seç',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     FutureBuilder<List<Student>>(
@@ -155,7 +194,11 @@ class _BorrowScreenState extends State<BorrowScreen> {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return const Center(
-                              child: CircularProgressIndicator());
+                              child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color(0xFF04BF61),
+                            ),
+                          ));
                         }
 
                         if (snapshot.hasError) {
@@ -170,11 +213,56 @@ class _BorrowScreenState extends State<BorrowScreen> {
                           );
                         }
 
+                        // Seçilen öğrenci listede yoksa, null yap
+                        if (selectedStudent != null) {
+                          bool studentInList = false;
+                          for (var student in students) {
+                            if (student.id == selectedStudent!.id) {
+                              studentInList = true;
+                              break;
+                            }
+                          }
+
+                          if (!studentInList) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              setState(() {
+                                selectedStudent = null;
+                              });
+                            });
+                          }
+                        }
+
                         return DropdownButtonFormField<Student>(
                           value: selectedStudent,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF04BF61),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF04BF61),
+                                width: 1.0,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF04BF61),
+                                width: 2.0,
+                              ),
+                            ),
                             hintText: 'Öğrenci seçin',
+                            hintStyle: TextStyle(
+                              color: Colors.grey[600],
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
                           ),
                           items: students.map((student) {
                             return DropdownMenuItem(
@@ -198,6 +286,10 @@ class _BorrowScreenState extends State<BorrowScreen> {
             ),
             const SizedBox(height: 16),
             Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -206,17 +298,45 @@ class _BorrowScreenState extends State<BorrowScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Kitap Seç',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.book,
+                                color: Color(0xFF04BF61),
+                              ),
+                              const SizedBox(width: 8),
+                              const Flexible(
+                                child: Text(
+                                  'Kitap Seç',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        TextButton.icon(
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
                           onPressed: _scanBarcode,
-                          icon: const Icon(Icons.qr_code_scanner),
-                          label: const Text('Barkod Okut'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF04BF61),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          icon: const Icon(Icons.qr_code_scanner, size: 20),
+                          label: const Text('Barkod Okut',
+                              style: TextStyle(fontSize: 14)),
                         ),
                       ],
                     ),
@@ -227,7 +347,11 @@ class _BorrowScreenState extends State<BorrowScreen> {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return const Center(
-                              child: CircularProgressIndicator());
+                              child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color(0xFF04BF61),
+                            ),
+                          ));
                         }
 
                         if (snapshot.hasError) {
@@ -246,11 +370,56 @@ class _BorrowScreenState extends State<BorrowScreen> {
                           );
                         }
 
+                        // Seçilen kitap listede yoksa, null yap
+                        if (selectedBook != null) {
+                          bool bookInList = false;
+                          for (var book in books) {
+                            if (book.id == selectedBook!.id) {
+                              bookInList = true;
+                              break;
+                            }
+                          }
+
+                          if (!bookInList) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              setState(() {
+                                selectedBook = null;
+                              });
+                            });
+                          }
+                        }
+
                         return DropdownButtonFormField<Book>(
                           value: selectedBook,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF04BF61),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF04BF61),
+                                width: 1.0,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF04BF61),
+                                width: 2.0,
+                              ),
+                            ),
                             hintText: 'Kitap seçin',
+                            hintStyle: TextStyle(
+                              color: Colors.grey[600],
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 8,
+                            ),
                           ),
                           items: books.map((book) {
                             return DropdownMenuItem(
@@ -276,15 +445,27 @@ class _BorrowScreenState extends State<BorrowScreen> {
                   ? _borrowBook
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: const Color(0xFF04BF61),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey,
                 padding: const EdgeInsets.all(16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text(
-                'Ödünç Ver',
-                style: TextStyle(fontSize: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.done,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Ödünç Ver',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
           ],

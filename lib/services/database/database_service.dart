@@ -457,4 +457,30 @@ class DatabaseService {
       );
     }
   }
+
+  // Aktif ödünç kaydını kitap ID'sine göre getir
+  Future<BorrowRecord?> getActiveBorrowRecordByBookId(int bookId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'borrow_records',
+      where: 'bookId = ? AND isReturned = 0',
+      whereArgs: [bookId],
+    );
+    if (maps.isEmpty) return null;
+    return BorrowRecord.fromMap(maps.first);
+  }
+
+  // Ödünç kaydını iade edildi olarak güncelle
+  Future<void> updateBorrowRecordAsReturned(int borrowRecordId) async {
+    final db = await database;
+    await db.update(
+      'borrow_records',
+      {
+        'returnDate': DateTime.now().toIso8601String(),
+        'isReturned': 1,
+      },
+      where: 'id = ?',
+      whereArgs: [borrowRecordId],
+    );
+  }
 }

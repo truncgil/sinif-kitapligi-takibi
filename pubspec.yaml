@@ -106,8 +106,8 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/icons/icon.png"
-    background_color: "#38cfba"
-    theme_color: "#38cfba"
+    background_color: "#04BF61"
+    theme_color: "#04BF61"
   windows:
     generate: true
     image_path: "assets/icons/icon.png"
@@ -117,17 +117,17 @@ flutter_launcher_icons:
     image_path: "assets/icons/icon.png"
 
 flutter_native_splash:
-  color: "#38cfba"
+  color: "#04BF61"
   #background_image: "assets/background.png"
-  image: "assets/icons/icon.png"
+  image: "assets/icons/edubook-sub.png"
   color_dark: "#121212"
   #background_image_dark: "assets/dark-background.png"
-  image_dark: "assets/icons/icon.png"
+  image_dark: "assets/icons/edubook-sub.png"
 
   android_12:
-    image: "assets/icons/icon.png"
-    icon_background_color: "#38cfba"
-    image_dark: "assets/icons/icon.png"
+    image: "assets/icons/edubook-sub.png"
+    icon_background_color: "#04BF61"
+    image_dark: "assets/icons/edubook-sub.png"
     icon_background_color_dark: "#121212"
 
   web: false

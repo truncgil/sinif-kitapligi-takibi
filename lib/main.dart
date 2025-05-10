@@ -23,12 +23,8 @@ void main() async {
 
   final databaseService = DatabaseService();
 
-  // Veritabanı tabloları değişti, bu nedenle veritabanını sıfırlıyoruz
-  // NOT: Bu kodu sadece geliştirme sürecinde kullanın,
-  // uygulama stabil olduktan sonra kaldırın!
-  await databaseService.resetDatabase();
-
-  // await databaseService.initialize();
+  // Veritabanını sıfırlamak yerine varolan veritabanını kullan
+  await databaseService.initialize();
 
   runApp(
     MultiProvider(
@@ -51,10 +47,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Kitap Takibi',
+      title: 'Edubook',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.green,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF04BF61),
+          primary: const Color(0xFF04BF61),
+        ),
         useMaterial3: true,
       ),
       home: const AppStartWidget(),
@@ -142,9 +142,8 @@ class _AppStartWidgetState extends State<AppStartWidget>
         child: ScaleTransition(
           scale: _animation,
           child: Image.asset(
-            'assets/icons/icon.png',
-            width: 150,
-            height: 150,
+            'assets/icons/edubook-sub.png',
+            width: 250,
           ),
         ),
       ),
