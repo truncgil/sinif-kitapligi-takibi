@@ -1,16 +1,24 @@
-# sinif_kitapligi_kutuphanesi
+# Kitap Takibi Kütüphanesi
 
-A new Flutter project.
+Flutter ile geliştirilmiş offline çalışan kitap takibi yönetim uygulaması.
 
-## Getting Started
+## Uygulama İkonunu Değiştirme
 
-This project is a starting point for a Flutter application.
+Uygulama ikonunu değiştirmek için aşağıdaki adımları izleyebilirsiniz:
 
-A few resources to get you started if this is your first Flutter project:
+1. Paylaştığınız resmi bilgisayarınıza kaydedin
+2. Projedeki `assets/icons/` klasörüne `icon.png` adıyla kopyalayın
+3. Aşağıdaki komutu çalıştırarak uygulama ikonlarını güncelleyin:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter pub run flutter_launcher_icons
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+4. Uygulama ikonunuzun tüm platformlar için güncellenmiş olması gerekir
+
+## Proje Yapısı
+
+- `lib/models/`: Veri modelleri
+- `lib/screens/`: Uygulama ekranları
+- `lib/services/`: Veritabanı ve barkod tarayıcı servisleri
+- `lib/widgets/`: Yeniden kullanılabilir widget'lar
