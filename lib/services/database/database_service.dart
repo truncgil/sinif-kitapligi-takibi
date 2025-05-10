@@ -1,5 +1,4 @@
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -12,12 +11,17 @@ import '../../models/class_room.dart';
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
   static Database? _database;
+  static var _databaseFactory;
 
   factory DatabaseService() {
     return _instance;
   }
 
   DatabaseService._internal();
+
+  void setDatabaseFactory(var factory) {
+    _databaseFactory = factory;
+  }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -320,58 +324,116 @@ class DatabaseService {
   Future<void> initialize() async {
     if (_database != null) return;
 
-    final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, 'library.db');
+    if (kIsWeb) {
+      // Web platformu için SQLite FFI Web kullanımı
+      var factory = _databaseFactory ?? databaseFactoryFfiWeb;
+      _database = await factory.openDatabase(
+        'library.db',
+        options: OpenDatabaseOptions(
+          version: 1,
+          onCreate: (Database db, int version) async {
+            // Sınıflar tablosu
+            await db.execute('''
+              CREATE TABLE class_rooms (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT
+              )
+            ''');
 
-    _database = await openDatabase(
-      path,
-      version: 1,
-      onCreate: (Database db, int version) async {
-        // Sınıflar tablosu
-        await db.execute('''
-          CREATE TABLE class_rooms (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT
-          )
-        ''');
+            // Öğrenciler tablosu
+            await db.execute('''
+              CREATE TABLE students (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                surname TEXT NOT NULL,
+                student_number TEXT NOT NULL,
+                class_name TEXT NOT NULL
+              )
+            ''');
 
-        // Öğrenciler tablosu
-        await db.execute('''
-          CREATE TABLE students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            surname TEXT NOT NULL,
-            student_number TEXT NOT NULL,
-            class_name TEXT NOT NULL
-          )
-        ''');
+            // Kitaplar tablosu
+            await db.execute('''
+              CREATE TABLE books (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                author TEXT NOT NULL,
+                isbn TEXT NOT NULL,
+                barcode TEXT NOT NULL UNIQUE,
+                is_available INTEGER NOT NULL DEFAULT 1
+              )
+            ''');
 
-        // Kitaplar tablosu
-        await db.execute('''
-          CREATE TABLE books (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            author TEXT NOT NULL,
-            isbn TEXT NOT NULL,
-            barcode TEXT NOT NULL UNIQUE,
-            is_available INTEGER NOT NULL DEFAULT 1
-          )
-        ''');
+            // Ödünç alma kayıtları tablosu
+            await db.execute('''
+              CREATE TABLE borrow_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL,
+                book_id INTEGER NOT NULL,
+                borrow_date TEXT NOT NULL,
+                return_date TEXT,
+                FOREIGN KEY (student_id) REFERENCES students (id),
+                FOREIGN KEY (book_id) REFERENCES books (id)
+              )
+            ''');
+          },
+        ),
+      );
+    } else {
+      // Mobil platformlar için normal SQLite kullanımı
+      final databasesPath = await getDatabasesPath();
+      final path = join(databasesPath, 'library.db');
 
-        // Ödünç alma kayıtları tablosu
-        await db.execute('''
-          CREATE TABLE borrow_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_id INTEGER NOT NULL,
-            book_id INTEGER NOT NULL,
-            borrow_date TEXT NOT NULL,
-            return_date TEXT,
-            FOREIGN KEY (student_id) REFERENCES students (id),
-            FOREIGN KEY (book_id) REFERENCES books (id)
-          )
-        ''');
-      },
-    );
+      _database = await openDatabase(
+        path,
+        version: 1,
+        onCreate: (Database db, int version) async {
+          // Sınıflar tablosu
+          await db.execute('''
+            CREATE TABLE class_rooms (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              description TEXT
+            )
+          ''');
+
+          // Öğrenciler tablosu
+          await db.execute('''
+            CREATE TABLE students (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              surname TEXT NOT NULL,
+              student_number TEXT NOT NULL,
+              class_name TEXT NOT NULL
+            )
+          ''');
+
+          // Kitaplar tablosu
+          await db.execute('''
+            CREATE TABLE books (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT NOT NULL,
+              author TEXT NOT NULL,
+              isbn TEXT NOT NULL,
+              barcode TEXT NOT NULL UNIQUE,
+              is_available INTEGER NOT NULL DEFAULT 1
+            )
+          ''');
+
+          // Ödünç alma kayıtları tablosu
+          await db.execute('''
+            CREATE TABLE borrow_records (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              student_id INTEGER NOT NULL,
+              book_id INTEGER NOT NULL,
+              borrow_date TEXT NOT NULL,
+              return_date TEXT,
+              FOREIGN KEY (student_id) REFERENCES students (id),
+              FOREIGN KEY (book_id) REFERENCES books (id)
+            )
+          ''');
+        },
+      );
+    }
   }
 }

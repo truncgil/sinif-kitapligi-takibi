@@ -1,6 +1,6 @@
 {
-  "name": "Sınıf Kitaplığı Kütüphanesi",
-  "description": "Flutter ile geliştirilmiş offline çalışan sınıf kitaplığı yönetim uygulaması",
+  "name": "Kitap Takibi Kütüphanesi",
+  "description": "Flutter ile geliştirilmiş offline çalışan Kitap Takibi yönetim uygulaması",
   "version": "1.0.0",
   "rules": {
     "project_structure": {

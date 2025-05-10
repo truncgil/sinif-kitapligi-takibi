@@ -395,8 +395,8 @@ class _StudentScreenState extends State<StudentScreen> {
                 );
               }
             },
-            child: const Text('Sil'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Sil'),
           ),
         ],
       ),

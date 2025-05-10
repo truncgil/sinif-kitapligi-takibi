@@ -27,7 +27,7 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Sınıf Kitaplığı',
+                  'Kitap Takibi',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -110,7 +110,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _CurrentlyReadingBooks(),
+                const _CurrentlyReadingBooks(),
               ],
             ),
           ),

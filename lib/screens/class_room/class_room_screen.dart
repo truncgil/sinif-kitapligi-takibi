@@ -208,8 +208,8 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
                 _showErrorMessage('Sınıf silinirken bir hata oluştu: $e');
               }
             },
-            child: const Text('Sil'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Sil'),
           ),
         ],
       ),
