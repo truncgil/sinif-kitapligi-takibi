@@ -65,16 +65,31 @@ class _BookScreenState extends State<BookScreen> {
                 ),
                 title: Text(book.title),
                 subtitle: Text(book.author),
-                trailing: Container(
-                  padding: const EdgeInsets.all(8.0),
-                  decoration: BoxDecoration(
-                    color: book.isAvailable ? Colors.green : Colors.red,
-                    borderRadius: BorderRadius.circular(4.0),
-                  ),
-                  child: Text(
-                    book.isAvailable ? 'Mevcut' : 'Ödünç Verildi',
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: book.isAvailable ? Colors.green : Colors.red,
+                        borderRadius: BorderRadius.circular(4.0),
+                      ),
+                      child: Text(
+                        book.isAvailable ? 'Mevcut' : 'Ödünç Verildi',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    if (book.isAvailable) ...[
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _showEditBookDialog(context, book),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => _showDeleteBookDialog(context, book),
+                      ),
+                    ],
+                  ],
                 ),
               );
             },
@@ -157,22 +172,231 @@ class _BookScreenState extends State<BookScreen> {
             child: const Text('İptal'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               if (formKey.currentState?.validate() ?? false) {
                 formKey.currentState?.save();
-                final book = Book(
-                  title: title,
-                  author: author,
-                  isbn: isbn,
-                  barcode: barcode,
-                );
-                _databaseService.insertBook(book).then((_) {
+
+                try {
+                  // Önce barkodun benzersiz olup olmadığını kontrol et
+                  final existingBook =
+                      await _databaseService.getBookByBarcode(barcode);
+                  if (existingBook != null) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text('Bu barkoda sahip bir kitap zaten mevcut!'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  final book = Book(
+                    title: title,
+                    author: author,
+                    isbn: isbn,
+                    barcode: barcode,
+                  );
+
+                  await _databaseService.insertBook(book);
                   _refreshBooks();
+
+                  if (!mounted) return;
                   Navigator.pop(context);
-                });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Kitap başarıyla eklendi.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Kitap eklenirken bir hata oluştu: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteBookDialog(BuildContext context, Book book) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kitap Silme'),
+        content:
+            Text('${book.title} kitabını silmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await _databaseService.deleteBook(book.id!);
+                _refreshBooks();
+
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Kitap başarıyla silindi.'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Kitap silinirken bir hata oluştu: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Sil'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showEditBookDialog(BuildContext context, Book book) async {
+    final formKey = GlobalKey<FormState>();
+    String title = book.title;
+    String author = book.author;
+    String isbn = book.isbn;
+    String barcode = book.barcode;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kitap Düzenle'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Kitap Adı'),
+                initialValue: title,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Kitap adı boş olamaz' : null,
+                onSaved: (value) => title = value ?? '',
+              ),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Yazar'),
+                initialValue: author,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Yazar boş olamaz' : null,
+                onSaved: (value) => author = value ?? '',
+              ),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'ISBN'),
+                initialValue: isbn,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'ISBN boş olamaz' : null,
+                onSaved: (value) => isbn = value ?? '',
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      decoration: const InputDecoration(labelText: 'Barkod'),
+                      initialValue: barcode,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Barkod boş olamaz' : null,
+                      onSaved: (value) => barcode = value ?? '',
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.qr_code_scanner),
+                    onPressed: () async {
+                      final scannedBarcode =
+                          await _barcodeScannerService.scanBarcode();
+                      if (scannedBarcode.isNotEmpty) {
+                        setState(() {
+                          barcode = scannedBarcode;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                formKey.currentState?.save();
+
+                try {
+                  // Barkod değiştiyse kontrol et
+                  if (barcode != book.barcode) {
+                    final existingBook =
+                        await _databaseService.getBookByBarcode(barcode);
+                    if (existingBook != null) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('Bu barkoda sahip bir kitap zaten mevcut!'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                  }
+
+                  final updatedBook = Book(
+                    id: book.id,
+                    title: title,
+                    author: author,
+                    isbn: isbn,
+                    barcode: barcode,
+                    isAvailable: book.isAvailable,
+                  );
+
+                  await _databaseService.updateBook(updatedBook);
+                  _refreshBooks();
+
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Kitap başarıyla güncellendi.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Kitap güncellenirken bir hata oluştu: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Güncelle'),
           ),
         ],
       ),
