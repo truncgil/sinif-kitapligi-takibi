@@ -1,0 +1,70 @@
+{
+  "name": "Sınıf Kitaplığı Kütüphanesi",
+  "description": "Flutter ile geliştirilmiş offline çalışan sınıf kitaplığı yönetim uygulaması",
+  "version": "1.0.0",
+  "rules": {
+    "project_structure": {
+      "lib": {
+        "models": {
+          "student.dart": "Öğrenci modeli",
+          "book.dart": "Kitap modeli",
+          "borrow_record.dart": "Ödünç alma kaydı modeli"
+        },
+        "screens": {
+          "home": "Ana ekran",
+          "student": "Öğrenci işlemleri",
+          "book": "Kitap işlemleri",
+          "history": "Geçmiş kayıtlar"
+        },
+        "services": {
+          "database": "SQLite veritabanı servisi",
+          "barcode_scanner": "Barkod okuyucu servisi"
+        },
+        "widgets": {
+          "common": "Ortak widget'lar",
+          "student": "Öğrenci ile ilgili widget'lar",
+          "book": "Kitap ile ilgili widget'lar"
+        }
+      }
+    },
+    "dependencies": {
+      "required": [
+        "sqflite: ^2.3.0",
+        "path: ^1.8.3",
+        "flutter_barcode_scanner: ^2.0.0",
+        "provider: ^6.0.5",
+        "intl: ^0.18.1"
+      ]
+    },
+    "features": {
+      "offline_storage": {
+        "type": "SQLite",
+        "tables": [
+          "students",
+          "books",
+          "borrow_records"
+        ]
+      },
+      "barcode_scanning": {
+        "type": "flutter_barcode_scanner",
+        "format": "ALL_FORMATS"
+      }
+    },
+    "code_style": {
+      "naming": {
+        "classes": "PascalCase",
+        "variables": "camelCase",
+        "constants": "UPPER_CASE"
+      },
+      "documentation": {
+        "required": true,
+        "language": "tr"
+      }
+    },
+    "architecture": {
+      "pattern": "Provider",
+      "state_management": "Provider",
+      "data_flow": "Unidirectional"
+    }
+  }
+} 
