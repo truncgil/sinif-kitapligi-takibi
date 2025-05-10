@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../models/student.dart';
 import '../../models/book.dart';
 import '../../models/borrow_record.dart';
+import '../../models/class_room.dart';
 
 /// Veritabanı işlemlerini yöneten servis sınıfı
 class DatabaseService {
@@ -49,18 +50,20 @@ class DatabaseService {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Öğrenci tablosu
+    await _createTables(db);
+  }
+
+  Future<void> _createTables(Database db) async {
     await db.execute('''
       CREATE TABLE students (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         surname TEXT NOT NULL,
-        studentNumber TEXT NOT NULL UNIQUE,
+        studentNumber TEXT NOT NULL,
         className TEXT NOT NULL
       )
     ''');
 
-    // Kitap tablosu
     await db.execute('''
       CREATE TABLE books (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,7 +75,6 @@ class DatabaseService {
       )
     ''');
 
-    // Ödünç alma kayıtları tablosu
     await db.execute('''
       CREATE TABLE borrow_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,12 +87,39 @@ class DatabaseService {
         FOREIGN KEY (bookId) REFERENCES books (id)
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE class_rooms (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT
+      )
+    ''');
   }
 
   // Öğrenci işlemleri
   Future<int> insertStudent(Student student) async {
     final db = await database;
     return await db.insert('students', student.toMap());
+  }
+
+  Future<void> deleteStudent(int id) async {
+    final db = await database;
+    await db.delete(
+      'students',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> updateStudent(Student student) async {
+    final db = await database;
+    await db.update(
+      'students',
+      student.toMap(),
+      where: 'id = ?',
+      whereArgs: [student.id],
+    );
   }
 
   Future<List<Student>> getAllStudents() async {
@@ -114,6 +143,25 @@ class DatabaseService {
   Future<int> insertBook(Book book) async {
     final db = await database;
     return await db.insert('books', book.toMap());
+  }
+
+  Future<void> deleteBook(int id) async {
+    final db = await database;
+    await db.delete(
+      'books',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> updateBook(Book book) async {
+    final db = await database;
+    await db.update(
+      'books',
+      book.toMap(),
+      where: 'id = ?',
+      whereArgs: [book.id],
+    );
   }
 
   Future<List<Book>> getAllBooks() async {
@@ -176,6 +224,37 @@ class DatabaseService {
       record.toMap(),
       where: 'id = ?',
       whereArgs: [record.id],
+    );
+  }
+
+  // Sınıf işlemleri
+  Future<List<ClassRoom>> getAllClassRooms() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('class_rooms');
+    return List.generate(maps.length, (i) => ClassRoom.fromMap(maps[i]));
+  }
+
+  Future<int> insertClassRoom(ClassRoom classRoom) async {
+    final db = await database;
+    return await db.insert('class_rooms', classRoom.toMap());
+  }
+
+  Future<void> updateClassRoom(ClassRoom classRoom) async {
+    final db = await database;
+    await db.update(
+      'class_rooms',
+      classRoom.toMap(),
+      where: 'id = ?',
+      whereArgs: [classRoom.id],
+    );
+  }
+
+  Future<void> deleteClassRoom(int id) async {
+    final db = await database;
+    await db.delete(
+      'class_rooms',
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 }
