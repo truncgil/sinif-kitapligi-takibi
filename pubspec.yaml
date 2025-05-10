@@ -42,6 +42,7 @@ dependencies:
   intl: ^0.18.1
   flutter_launcher_icons: ^0.14.3
   mobile_scanner: ^7.0.0
+  flutter_native_splash: ^2.4.6
 
 dev_dependencies:
   flutter_test:
@@ -66,8 +67,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+    - assets/icons/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -114,3 +115,26 @@ flutter_launcher_icons:
   macos:
     generate: true
     image_path: "assets/icons/icon.png"
+
+flutter_native_splash:
+  color: "#38cfba"
+  #background_image: "assets/background.png"
+  image: "assets/icons/icon.png"
+  color_dark: "#121212"
+  #background_image_dark: "assets/dark-background.png"
+  image_dark: "assets/icons/icon.png"
+
+  android_12:
+    image: "assets/icons/icon.png"
+    icon_background_color: "#38cfba"
+    image_dark: "assets/icons/icon.png"
+    icon_background_color_dark: "#121212"
+
+  web: false
+  ios: true
+  android: true
+  android_gravity: center
+  ios_content_mode: center
+  fullscreen: true
+
+  android_screen_orientation: portrait
