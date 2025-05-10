@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/class_room.dart';
 import '../../services/database/database_service.dart';
-import '../../widgets/common/toast_message.dart';
 
 /// Sınıf işlemleri ekranı
 class ClassRoomScreen extends StatefulWidget {
@@ -27,6 +26,36 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
     setState(() {
       _classRoomsFuture = _databaseService.getAllClassRooms();
     });
+  }
+
+  void _showSuccessMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  void _showErrorMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
   }
 
   @override
@@ -58,26 +87,29 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
             itemCount: classRooms.length,
             itemBuilder: (context, index) {
               final classRoom = classRooms[index];
-              return ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.class_),
-                ),
-                title: Text(classRoom.name),
-                subtitle: Text(classRoom.description ?? ''),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () =>
-                          _showEditClassRoomDialog(context, classRoom),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () =>
-                          _showDeleteClassRoomDialog(context, classRoom),
-                    ),
-                  ],
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.class_),
+                  ),
+                  title: Text(classRoom.name),
+                  subtitle: Text(classRoom.description ?? ''),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () =>
+                            _showEditClassRoomDialog(context, classRoom),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () =>
+                            _showDeleteClassRoomDialog(context, classRoom),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -137,18 +169,9 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
 
                   if (!mounted) return;
                   Navigator.pop(context);
-                  showToastMessage(
-                    context,
-                    message: 'Sınıf başarıyla eklendi.',
-                    isSuccess: true,
-                  );
+                  _showSuccessMessage('Sınıf başarıyla eklendi.');
                 } catch (e) {
-                  if (!mounted) return;
-                  showToastMessage(
-                    context,
-                    message: 'Sınıf eklenirken bir hata oluştu: $e',
-                    isSuccess: false,
-                  );
+                  _showErrorMessage('Sınıf eklenirken bir hata oluştu: $e');
                 }
               }
             },
@@ -161,7 +184,7 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
 
   Future<void> _showDeleteClassRoomDialog(
       BuildContext context, ClassRoom classRoom) async {
-    return showDialog(
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sınıf Silme'),
@@ -180,18 +203,9 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
 
                 if (!mounted) return;
                 Navigator.pop(context);
-                showToastMessage(
-                  context,
-                  message: 'Sınıf başarıyla silindi.',
-                  isSuccess: true,
-                );
+                _showSuccessMessage('Sınıf başarıyla silindi.');
               } catch (e) {
-                if (!mounted) return;
-                showToastMessage(
-                  context,
-                  message: 'Sınıf silinirken bir hata oluştu: $e',
-                  isSuccess: false,
-                );
+                _showErrorMessage('Sınıf silinirken bir hata oluştu: $e');
               }
             },
             child: const Text('Sil'),
@@ -254,18 +268,9 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
 
                   if (!mounted) return;
                   Navigator.pop(context);
-                  showToastMessage(
-                    context,
-                    message: 'Sınıf başarıyla güncellendi.',
-                    isSuccess: true,
-                  );
+                  _showSuccessMessage('Sınıf başarıyla güncellendi.');
                 } catch (e) {
-                  if (!mounted) return;
-                  showToastMessage(
-                    context,
-                    message: 'Sınıf güncellenirken bir hata oluştu: $e',
-                    isSuccess: false,
-                  );
+                  _showErrorMessage('Sınıf güncellenirken bir hata oluştu: $e');
                 }
               }
             },

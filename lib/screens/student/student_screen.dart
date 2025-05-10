@@ -147,17 +147,31 @@ class _StudentScreenState extends State<StudentScreen> {
                       return const Text('Önce sınıf eklemelisiniz!');
                     }
 
+                    final uniqueClassNames =
+                        classRooms.map((c) => c.name).toSet().toList();
+
+                    if (selectedClassName == null &&
+                        uniqueClassNames.isNotEmpty) {
+                      selectedClassName = uniqueClassNames[0];
+                    }
+
+                    if (!uniqueClassNames.contains(selectedClassName)) {
+                      selectedClassName = uniqueClassNames[0];
+                    }
+
                     return DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Sınıf'),
                       value: selectedClassName,
-                      items: classRooms.map((classRoom) {
+                      items: uniqueClassNames.map((className) {
                         return DropdownMenuItem(
-                          value: classRoom.name,
-                          child: Text(classRoom.name),
+                          value: className,
+                          child: Text(className),
                         );
                       }).toList(),
                       onChanged: (value) {
-                        selectedClassName = value;
+                        setState(() {
+                          selectedClassName = value;
+                        });
                       },
                       validator: (value) =>
                           value == null ? 'Lütfen bir sınıf seçin' : null,
@@ -260,17 +274,31 @@ class _StudentScreenState extends State<StudentScreen> {
                       return const Text('Önce sınıf eklemelisiniz!');
                     }
 
+                    final uniqueClassNames =
+                        classRooms.map((c) => c.name).toSet().toList();
+
+                    if (selectedClassName == null &&
+                        uniqueClassNames.isNotEmpty) {
+                      selectedClassName = uniqueClassNames[0];
+                    }
+
+                    if (!uniqueClassNames.contains(selectedClassName)) {
+                      selectedClassName = uniqueClassNames[0];
+                    }
+
                     return DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Sınıf'),
                       value: selectedClassName,
-                      items: classRooms.map((classRoom) {
+                      items: uniqueClassNames.map((className) {
                         return DropdownMenuItem(
-                          value: classRoom.name,
-                          child: Text(classRoom.name),
+                          value: className,
+                          child: Text(className),
                         );
                       }).toList(),
                       onChanged: (value) {
-                        selectedClassName = value;
+                        setState(() {
+                          selectedClassName = value;
+                        });
                       },
                       validator: (value) =>
                           value == null ? 'Lütfen bir sınıf seçin' : null,

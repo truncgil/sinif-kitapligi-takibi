@@ -139,6 +139,16 @@ class DatabaseService {
     return Student.fromMap(maps.first);
   }
 
+  Future<List<Student>> getStudentsByClass(String className) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'students',
+      where: 'className = ?',
+      whereArgs: [className],
+    );
+    return List.generate(maps.length, (i) => Student.fromMap(maps[i]));
+  }
+
   // Kitap işlemleri
   Future<int> insertBook(Book book) async {
     final db = await database;
@@ -227,6 +237,28 @@ class DatabaseService {
     );
   }
 
+  Future<List<BorrowRecord>> getBorrowRecordsByStudent(int studentId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'borrow_records',
+      where: 'studentId = ?',
+      whereArgs: [studentId],
+      orderBy: 'borrowDate DESC',
+    );
+    return List.generate(maps.length, (i) => BorrowRecord.fromMap(maps[i]));
+  }
+
+  Future<List<BorrowRecord>> getBorrowRecordsByBook(int bookId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'borrow_records',
+      where: 'bookId = ?',
+      whereArgs: [bookId],
+      orderBy: 'borrowDate DESC',
+    );
+    return List.generate(maps.length, (i) => BorrowRecord.fromMap(maps[i]));
+  }
+
   // Sınıf işlemleri
   Future<List<ClassRoom>> getAllClassRooms() async {
     final db = await database;
@@ -255,6 +287,91 @@ class DatabaseService {
       'class_rooms',
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getCurrentlyBorrowedBooks() async {
+    final db = await database;
+    final List<Map<String, dynamic>> records = await db.query(
+      'borrow_records',
+      where: 'isReturned = ?',
+      whereArgs: [0],
+      orderBy: 'borrowDate DESC',
+    );
+
+    List<Map<String, dynamic>> result = [];
+    for (var record in records) {
+      final borrowRecord = BorrowRecord.fromMap(record);
+      final book = await getBookById(borrowRecord.bookId);
+      final student = await getStudentById(borrowRecord.studentId);
+
+      if (book != null && student != null) {
+        result.add({
+          'book': book,
+          'borrowDate': borrowRecord.borrowDate,
+          'studentName': '${student.name} ${student.surname}',
+        });
+      }
+    }
+
+    return result;
+  }
+
+  Future<void> initialize() async {
+    if (_database != null) return;
+
+    final databasesPath = await getDatabasesPath();
+    final path = join(databasesPath, 'library.db');
+
+    _database = await openDatabase(
+      path,
+      version: 1,
+      onCreate: (Database db, int version) async {
+        // Sınıflar tablosu
+        await db.execute('''
+          CREATE TABLE class_rooms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT
+          )
+        ''');
+
+        // Öğrenciler tablosu
+        await db.execute('''
+          CREATE TABLE students (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            surname TEXT NOT NULL,
+            student_number TEXT NOT NULL,
+            class_name TEXT NOT NULL
+          )
+        ''');
+
+        // Kitaplar tablosu
+        await db.execute('''
+          CREATE TABLE books (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            author TEXT NOT NULL,
+            isbn TEXT NOT NULL,
+            barcode TEXT NOT NULL UNIQUE,
+            is_available INTEGER NOT NULL DEFAULT 1
+          )
+        ''');
+
+        // Ödünç alma kayıtları tablosu
+        await db.execute('''
+          CREATE TABLE borrow_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            book_id INTEGER NOT NULL,
+            borrow_date TEXT NOT NULL,
+            return_date TEXT,
+            FOREIGN KEY (student_id) REFERENCES students (id),
+            FOREIGN KEY (book_id) REFERENCES books (id)
+          )
+        ''');
+      },
     );
   }
 }

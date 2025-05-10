@@ -59,37 +59,119 @@ class _BookScreenState extends State<BookScreen> {
             itemCount: books.length,
             itemBuilder: (context, index) {
               final book = books[index];
-              return ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.book),
+              return Dismissible(
+                key: Key(book.id.toString()),
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 16),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                  ),
                 ),
-                title: Text(book.title),
-                subtitle: Text(book.author),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8.0),
+                secondaryBackground: Container(
+                  color: Colors.blue,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(left: 16),
+                  child: const Icon(
+                    Icons.edit,
+                    color: Colors.white,
+                  ),
+                ),
+                confirmDismiss: (direction) async {
+                  if (direction == DismissDirection.endToStart) {
+                    // Düzenleme işlemi
+                    _showEditBookDialog(context, book);
+                    return false;
+                  } else {
+                    // Silme işlemi
+                    return await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Kitabı Sil'),
+                          content: Text(
+                              '${book.title} kitabını silmek istediğinize emin misiniz?'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('İptal'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text(
+                                'Sil',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }
+                },
+                onDismissed: (direction) async {
+                  if (direction == DismissDirection.startToEnd) {
+                    try {
+                      await _databaseService.deleteBook(book.id!);
+                      _refreshBooks();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${book.title} başarıyla silindi'),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.all(8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Kitap silinirken bir hata oluştu: $e'),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.all(8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: Card(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.book),
+                    ),
+                    title: Text(book.title),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(book.author),
+                        Text('ISBN: ${book.isbn}'),
+                        Text('Barkod: ${book.barcode}'),
+                      ],
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: book.isAvailable ? Colors.green : Colors.red,
-                        borderRadius: BorderRadius.circular(4.0),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         book.isAvailable ? 'Mevcut' : 'Ödünç Verildi',
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
-                    if (book.isAvailable) ...[
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _showEditBookDialog(context, book),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _showDeleteBookDialog(context, book),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               );
             },
@@ -222,50 +304,6 @@ class _BookScreenState extends State<BookScreen> {
               }
             },
             child: const Text('Kaydet'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showDeleteBookDialog(BuildContext context, Book book) async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Kitap Silme'),
-        content:
-            Text('${book.title} kitabını silmek istediğinize emin misiniz?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await _databaseService.deleteBook(book.id!);
-                _refreshBooks();
-
-                if (!mounted) return;
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Kitap başarıyla silindi.'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Kitap silinirken bir hata oluştu: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('Sil'),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
           ),
         ],
       ),
