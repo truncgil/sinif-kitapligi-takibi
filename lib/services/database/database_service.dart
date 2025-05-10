@@ -23,6 +23,25 @@ class DatabaseService {
     _databaseFactory = factory;
   }
 
+  /// Veritabanını sıfırlar ve yeniden oluşturur
+  Future<void> resetDatabase() async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+
+    if (kIsWeb) {
+      var factory = _databaseFactory ?? databaseFactoryFfiWeb;
+      await factory.deleteDatabase('library.db');
+    } else {
+      String path = join(await getDatabasesPath(), 'library.db');
+      await deleteDatabase(path);
+    }
+
+    // Veritabanını yeniden başlat
+    await initialize();
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
@@ -33,7 +52,7 @@ class DatabaseService {
   Future<Database> _initDatabase() async {
     if (kIsWeb) {
       // Web platformu için SQLite FFI Web kullanımı
-      var factory = databaseFactoryFfiWeb;
+      var factory = _databaseFactory ?? databaseFactoryFfiWeb;
       return await factory.openDatabase(
         'library.db',
         options: OpenDatabaseOptions(
@@ -347,8 +366,8 @@ class DatabaseService {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 surname TEXT NOT NULL,
-                student_number TEXT NOT NULL,
-                class_name TEXT NOT NULL
+                studentNumber TEXT NOT NULL,
+                className TEXT NOT NULL
               )
             ''');
 
@@ -360,7 +379,7 @@ class DatabaseService {
                 author TEXT NOT NULL,
                 isbn TEXT NOT NULL,
                 barcode TEXT NOT NULL UNIQUE,
-                is_available INTEGER NOT NULL DEFAULT 1
+                isAvailable INTEGER NOT NULL DEFAULT 1
               )
             ''');
 
@@ -368,12 +387,13 @@ class DatabaseService {
             await db.execute('''
               CREATE TABLE borrow_records (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                student_id INTEGER NOT NULL,
-                book_id INTEGER NOT NULL,
-                borrow_date TEXT NOT NULL,
-                return_date TEXT,
-                FOREIGN KEY (student_id) REFERENCES students (id),
-                FOREIGN KEY (book_id) REFERENCES books (id)
+                studentId INTEGER NOT NULL,
+                bookId INTEGER NOT NULL,
+                borrowDate TEXT NOT NULL,
+                returnDate TEXT,
+                isReturned INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (studentId) REFERENCES students (id),
+                FOREIGN KEY (bookId) REFERENCES books (id)
               )
             ''');
           },
@@ -403,8 +423,8 @@ class DatabaseService {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               name TEXT NOT NULL,
               surname TEXT NOT NULL,
-              student_number TEXT NOT NULL,
-              class_name TEXT NOT NULL
+              studentNumber TEXT NOT NULL,
+              className TEXT NOT NULL
             )
           ''');
 
@@ -416,7 +436,7 @@ class DatabaseService {
               author TEXT NOT NULL,
               isbn TEXT NOT NULL,
               barcode TEXT NOT NULL UNIQUE,
-              is_available INTEGER NOT NULL DEFAULT 1
+              isAvailable INTEGER NOT NULL DEFAULT 1
             )
           ''');
 
@@ -424,12 +444,13 @@ class DatabaseService {
           await db.execute('''
             CREATE TABLE borrow_records (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
-              student_id INTEGER NOT NULL,
-              book_id INTEGER NOT NULL,
-              borrow_date TEXT NOT NULL,
-              return_date TEXT,
-              FOREIGN KEY (student_id) REFERENCES students (id),
-              FOREIGN KEY (book_id) REFERENCES books (id)
+              studentId INTEGER NOT NULL,
+              bookId INTEGER NOT NULL,
+              borrowDate TEXT NOT NULL,
+              returnDate TEXT,
+              isReturned INTEGER NOT NULL DEFAULT 0,
+              FOREIGN KEY (studentId) REFERENCES students (id),
+              FOREIGN KEY (bookId) REFERENCES books (id)
             )
           ''');
         },

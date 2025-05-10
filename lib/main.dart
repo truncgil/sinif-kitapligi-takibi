@@ -22,7 +22,13 @@ void main() async {
   }
 
   final databaseService = DatabaseService();
-  await databaseService.initialize();
+
+  // Veritabanı tabloları değişti, bu nedenle veritabanını sıfırlıyoruz
+  // NOT: Bu kodu sadece geliştirme sürecinde kullanın,
+  // uygulama stabil olduktan sonra kaldırın!
+  await databaseService.resetDatabase();
+
+  // await databaseService.initialize();
 
   runApp(
     MultiProvider(
