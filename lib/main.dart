@@ -142,7 +142,7 @@ class _AppStartWidgetState extends State<AppStartWidget>
         child: ScaleTransition(
           scale: _animation,
           child: Image.asset(
-            'assets/icons/edubook-sub.png',
+            'assets/icons/edubook.png',
             width: 250,
           ),
         ),
