@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/book.dart';
 import '../../services/database/database_service.dart';
 import '../../services/barcode_scanner/barcode_scanner_service.dart';
+import 'book_detail_screen.dart';
 
 /// Kitap işlemleri ekranı
 class BookScreen extends StatefulWidget {
@@ -391,6 +392,15 @@ class _BookScreenState extends State<BookScreen> {
                               style: const TextStyle(color: Colors.white),
                             ),
                           ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    BookDetailScreen(book: book),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     );
