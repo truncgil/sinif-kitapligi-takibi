@@ -52,10 +52,10 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
       final book = await _databaseService.getBookByBarcode(barcode);
 
       if (book == null) {
-        _showMessage('Bu barkod numarasına sahip kitap bulunamadı.');
-        setState(() {
-          _isProcessing = false;
-        });
+        // Kitap bulunamadıysa barkodu ana ekrana döndür
+        if (mounted) {
+          Navigator.pop(context, barcode);
+        }
         return;
       }
 
