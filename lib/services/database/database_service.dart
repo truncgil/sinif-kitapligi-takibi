@@ -343,6 +343,9 @@ class DatabaseService {
   Future<void> initialize() async {
     if (_database != null) return;
 
+    // Veritabanının daha önce oluşturulup oluşturulmadığını kontrol et
+    bool isFirstRun = false;
+
     if (kIsWeb) {
       // Web platformu için SQLite FFI Web kullanımı
       var factory = _databaseFactory ?? databaseFactoryFfiWeb;
@@ -351,6 +354,7 @@ class DatabaseService {
         options: OpenDatabaseOptions(
           version: 1,
           onCreate: (Database db, int version) async {
+            isFirstRun = true;
             // Sınıflar tablosu
             await db.execute('''
               CREATE TABLE class_rooms (
@@ -396,6 +400,9 @@ class DatabaseService {
                 FOREIGN KEY (bookId) REFERENCES books (id)
               )
             ''');
+
+            // Örnek verileri ekle
+            await _insertDemoData(db);
           },
         ),
       );
@@ -403,6 +410,10 @@ class DatabaseService {
       // Mobil platformlar için normal SQLite kullanımı
       final databasesPath = await getDatabasesPath();
       final path = join(databasesPath, 'library.db');
+
+      // Veritabanının daha önce var olup olmadığını kontrol et
+      bool dbExists = await databaseExists(path);
+      isFirstRun = !dbExists;
 
       _database = await openDatabase(
         path,
@@ -453,8 +464,134 @@ class DatabaseService {
               FOREIGN KEY (bookId) REFERENCES books (id)
             )
           ''');
+
+          // Örnek verileri ekle
+          await _insertDemoData(db);
         },
       );
+    }
+  }
+
+  /// Örnek demo verileri ekler (sadece ilk kurulumda çalışır)
+  Future<void> _insertDemoData(Database db) async {
+    // Sınıfları ekle
+    List<Map<String, dynamic>> classRooms = [
+      {'name': '1-A', 'description': '1. Sınıf A Şubesi'},
+      {'name': '2-B', 'description': '2. Sınıf B Şubesi'},
+      {'name': '3-C', 'description': '3. Sınıf C Şubesi'},
+      {'name': '4-A', 'description': '4. Sınıf A Şubesi'},
+    ];
+
+    for (var classRoom in classRooms) {
+      await db.insert('class_rooms', classRoom);
+    }
+
+    // Öğrencileri ekle
+    List<Map<String, dynamic>> students = [
+      {
+        'name': 'Ahmet',
+        'surname': 'Yılmaz',
+        'studentNumber': '1001',
+        'className': '1-A'
+      },
+      {
+        'name': 'Ayşe',
+        'surname': 'Kaya',
+        'studentNumber': '1002',
+        'className': '1-A'
+      },
+      {
+        'name': 'Mehmet',
+        'surname': 'Demir',
+        'studentNumber': '2001',
+        'className': '2-B'
+      },
+      {
+        'name': 'Zeynep',
+        'surname': 'Çelik',
+        'studentNumber': '2002',
+        'className': '2-B'
+      },
+      {
+        'name': 'Ali',
+        'surname': 'Öztürk',
+        'studentNumber': '3001',
+        'className': '3-C'
+      },
+      {
+        'name': 'Fatma',
+        'surname': 'Şahin',
+        'studentNumber': '4001',
+        'className': '4-A'
+      },
+    ];
+
+    for (var student in students) {
+      await db.insert('students', student);
+    }
+
+    // Kitapları ekle
+    List<Map<String, dynamic>> books = [
+      {
+        'title': 'Küçük Prens',
+        'author': 'Antoine de Saint-Exupéry',
+        'isbn': '9789750719981',
+        'barcode': 'KP001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Şeker Portakalı',
+        'author': 'Jose Mauro De Vasconcelos',
+        'isbn': '9789750726477',
+        'barcode': 'SP001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Küçük Kara Balık',
+        'author': 'Samed Behrengi',
+        'isbn': '9789944717519',
+        'barcode': 'KKB001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Martı Jonathan Livingston',
+        'author': 'Richard Bach',
+        'isbn': '9789754587272',
+        'barcode': 'MJL001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Beyaz Diş',
+        'author': 'Jack London',
+        'isbn': '9789750736377',
+        'barcode': 'BD001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Simyacı',
+        'author': 'Paulo Coelho',
+        'isbn': '9789750726538',
+        'barcode': 'SM001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Hayvan Çiftliği',
+        'author': 'George Orwell',
+        'isbn': '9789753638029',
+        'barcode': 'HC001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Fareler ve İnsanlar',
+        'author': 'John Steinbeck',
+        'isbn': '9789753638043',
+        'barcode': 'FI001',
+        'isAvailable': 1
+      },
+    ];
+
+    for (var book in books) {
+      await db.insert('books', book);
     }
   }
 
