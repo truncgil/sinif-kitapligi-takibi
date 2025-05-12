@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/student.dart';
 import '../../models/class_room.dart';
 import '../../services/database/database_service.dart';
+import 'student_detail_screen.dart';
 
 /// Öğrenci işlemleri ekranı
 class StudentScreen extends StatefulWidget {
@@ -198,31 +199,37 @@ class _StudentScreenState extends State<StudentScreen> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Sınıf: ${student.className}'),
                               Text('Öğrenci No: ${student.studentNumber}'),
-                              FutureBuilder<int>(
-                                future: _databaseService
-                                    .getActiveBorrowCountByStudentId(
-                                        student.id!),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Text('Yükleniyor...');
-                                  }
-                                  final borrowCount = snapshot.data ?? 0;
-                                  return Text(
-                                    'Ödünç Alınan Kitap: $borrowCount',
-                                    style: TextStyle(
-                                      color: borrowCount > 0
-                                          ? Colors.blue
-                                          : Colors.grey,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  );
-                                },
-                              ),
+                              Text('Sınıf: ${student.className}'),
                             ],
                           ),
+                          trailing: FutureBuilder<int>(
+                            future: _databaseService
+                                .getActiveBorrowCountByStudentId(student.id!),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Text('Yükleniyor...');
+                              }
+                              final count = snapshot.data ?? 0;
+                              return Text(
+                                '$count Kitap',
+                                style: TextStyle(
+                                  color: count > 0 ? Colors.blue : Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            },
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    StudentDetailScreen(student: student),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     );

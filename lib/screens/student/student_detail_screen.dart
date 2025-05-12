@@ -5,85 +5,180 @@ import '../../models/borrow_record.dart';
 import '../../models/book.dart';
 import '../../services/database/database_service.dart';
 
-class StudentDetailScreen extends StatelessWidget {
+class StudentDetailScreen extends StatefulWidget {
   final Student student;
 
-  const StudentDetailScreen({Key? key, required this.student})
-      : super(key: key);
+  const StudentDetailScreen({
+    super.key,
+    required this.student,
+  });
+
+  @override
+  State<StudentDetailScreen> createState() => _StudentDetailScreenState();
+}
+
+class _StudentDetailScreenState extends State<StudentDetailScreen> {
+  late DatabaseService _databaseService;
+  late Future<List<BorrowRecord>> _borrowRecordsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
+    _loadBorrowRecords();
+  }
+
+  void _loadBorrowRecords() {
+    setState(() {
+      _borrowRecordsFuture =
+          _databaseService.getBorrowRecordsByStudentId(widget.student.id!);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${student.name} ${student.surname}'),
+        title: Text('${widget.student.name} ${widget.student.surname}'),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _getBorrowHistory(context),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          Card(
+            margin: const EdgeInsets.all(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Öğrenci Bilgileri',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInfoRow('Ad Soyad',
+                      '${widget.student.name} ${widget.student.surname}'),
+                  _buildInfoRow('Öğrenci No', widget.student.studentNumber),
+                  _buildInfoRow('Sınıf', widget.student.className),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<BorrowRecord>>(
+              future: _borrowRecordsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Hata: ${snapshot.error}'));
-          }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Hata: ${snapshot.error}'));
+                }
 
-          final borrowHistory = snapshot.data ?? [];
+                final records = snapshot.data ?? [];
 
-          return ListView.builder(
-            itemCount: borrowHistory.length,
-            itemBuilder: (context, index) {
-              final record = borrowHistory[index];
-              final book = record['book'] as Book;
-              final borrowRecord = record['borrowRecord'] as BorrowRecord;
+                if (records.isEmpty) {
+                  return const Center(
+                    child:
+                        Text('Henüz kitap ödünç alma kaydı bulunmamaktadır.'),
+                  );
+                }
 
-              return ListTile(
-                title: Text(book.title),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Yazar: ${book.author}'),
-                    Text(
-                        'Alınma Tarihi: ${_formatDate(borrowRecord.borrowDate)}'),
-                    if (borrowRecord.returnDate != null)
-                      Text(
-                          'İade Tarihi: ${_formatDate(borrowRecord.returnDate!)}'),
-                  ],
-                ),
-                trailing: borrowRecord.isReturned
-                    ? const Chip(label: Text('İade Edildi'))
-                    : const Chip(
-                        label: Text('İade Edilmedi'),
-                        backgroundColor: Colors.red,
-                      ),
-              );
-            },
-          );
-        },
+                return ListView.builder(
+                  itemCount: records.length,
+                  itemBuilder: (context, index) {
+                    final record = records[index];
+                    return FutureBuilder<Book?>(
+                      future: _databaseService.getBookById(record.bookId),
+                      builder: (context, bookSnapshot) {
+                        if (bookSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+
+                        final book = bookSnapshot.data;
+                        if (book == null) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 4),
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.book),
+                            ),
+                            title: Text(book.title),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(book.author),
+                                Text(
+                                  'Ödünç Alınma: ${_formatDate(record.borrowDate)}',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                if (record.returnDate != null)
+                                  Text(
+                                    'İade: ${_formatDate(record.returnDate!)}',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                              ],
+                            ),
+                            trailing: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: record.isReturned
+                                    ? Colors.green
+                                    : Colors.orange,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                record.isReturned
+                                    ? 'İade Edildi'
+                                    : 'Ödünç Alındı',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Future<List<Map<String, dynamic>>> _getBorrowHistory(
-      BuildContext context) async {
-    final dbService = Provider.of<DatabaseService>(context, listen: false);
-    final records = await dbService.getBorrowRecordsByStudent(student.id!);
-
-    List<Map<String, dynamic>> history = [];
-    for (var record in records) {
-      final book = await dbService.getBookById(record.bookId);
-      if (book != null) {
-        history.add({
-          'book': book,
-          'borrowRecord': record,
-        });
-      }
-    }
-
-    return history;
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
   }
 }
