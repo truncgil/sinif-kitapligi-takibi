@@ -292,11 +292,11 @@ class _BookHeader extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(0),
         boxShadow: [
           BoxShadow(
             color: colorScheme.shadow.withOpacity(0.1),

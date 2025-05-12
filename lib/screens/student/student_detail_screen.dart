@@ -8,6 +8,7 @@ import '../../constants/colors.dart';
 import '../barcode_scanner/barcode_scanner_page.dart';
 import '../borrow/borrow_screen.dart';
 import '../../providers/library_provider.dart';
+import '../book/book_detail_screen.dart';
 
 class StudentDetailScreen extends StatefulWidget {
   final Student student;
@@ -236,39 +237,50 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                         return Card(
                           margin: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 4),
-                          child: ListTile(
-                            leading: const CircleAvatar(
-                              child: Icon(Icons.book),
-                            ),
-                            title: Text(book.title),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(book.author),
-                                Text(
-                                  'Ödünç Alınma: ${_formatDate(record.borrowDate)}',
-                                  style: const TextStyle(fontSize: 12),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      BookDetailScreen(book: book),
                                 ),
-                                if (record.returnDate != null)
+                              );
+                            },
+                            child: ListTile(
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.book),
+                              ),
+                              title: Text(book.title),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(book.author),
                                   Text(
-                                    'İade: ${_formatDate(record.returnDate!)}',
+                                    'Ödünç Alınma: ${_formatDate(record.borrowDate)}',
                                     style: const TextStyle(fontSize: 12),
                                   ),
-                              ],
-                            ),
-                            trailing: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: record.isReturned
-                                    ? Colors.green
-                                    : Colors.orange,
-                                borderRadius: BorderRadius.circular(4),
+                                  if (record.returnDate != null)
+                                    Text(
+                                      'İade: ${_formatDate(record.returnDate!)}',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                ],
                               ),
-                              child: Text(
-                                record.isReturned
-                                    ? 'İade Edildi'
-                                    : 'Ödünç Alındı',
-                                style: const TextStyle(color: Colors.white),
+                              trailing: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: record.isReturned
+                                      ? Colors.green
+                                      : Colors.orange,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  record.isReturned
+                                      ? 'İade Edildi'
+                                      : 'Ödünç Alındı',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
                               ),
                             ),
                           ),
