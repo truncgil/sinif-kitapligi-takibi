@@ -42,7 +42,14 @@ class _BorrowScreenState extends State<BorrowScreen> {
   void _refreshData() {
     setState(() {
       _studentsFuture = _databaseService.getAllStudents();
-      _availableBooksFuture = _databaseService.getAllBooks();
+      _availableBooksFuture = _databaseService.getAllBooks().then((books) {
+        final availableBooks = books.where((book) => book.isAvailable).toList();
+        if (selectedBook != null &&
+            !availableBooks.any((b) => b.id == selectedBook!.id)) {
+          availableBooks.add(selectedBook!);
+        }
+        return availableBooks;
+      });
     });
   }
 
@@ -52,6 +59,16 @@ class _BorrowScreenState extends State<BorrowScreen> {
       if (book != null && book.isAvailable) {
         setState(() {
           selectedBook = book;
+        });
+
+        _availableBooksFuture = _databaseService.getAllBooks().then((books) {
+          final availableBooks =
+              books.where((book) => book.isAvailable).toList();
+          if (selectedBook != null &&
+              !availableBooks.any((b) => b.id == selectedBook!.id)) {
+            availableBooks.add(selectedBook!);
+          }
+          return availableBooks;
         });
       } else {
         if (!mounted) return;
@@ -358,10 +375,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
                           return Center(child: Text('Hata: ${snapshot.error}'));
                         }
 
-                        final books = snapshot.data
-                                ?.where((book) => book.isAvailable)
-                                .toList() ??
-                            [];
+                        final books = snapshot.data ?? [];
 
                         if (books.isEmpty) {
                           return const Center(
@@ -370,22 +384,11 @@ class _BorrowScreenState extends State<BorrowScreen> {
                           );
                         }
 
-                        // Seçilen kitap listede yoksa, null yap
                         if (selectedBook != null) {
-                          bool bookInList = false;
-                          for (var book in books) {
-                            if (book.id == selectedBook!.id) {
-                              bookInList = true;
-                              break;
-                            }
-                          }
-
-                          if (!bookInList) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              setState(() {
-                                selectedBook = null;
-                              });
-                            });
+                          if (!books
+                                  .any((book) => book.id == selectedBook!.id) &&
+                              selectedBook!.isAvailable) {
+                            books.add(selectedBook!);
                           }
                         }
 
@@ -410,7 +413,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
                               borderRadius: BorderRadius.circular(8),
                               borderSide: const BorderSide(
                                 color: Color(0xFF04BF61),
-                                width: 1.0,
+                                width: 2.0,
                               ),
                             ),
                             hintText: 'Kitap seçin',
@@ -418,8 +421,8 @@ class _BorrowScreenState extends State<BorrowScreen> {
                               color: Colors.grey[600],
                             ),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 8,
+                              horizontal: 16,
+                              vertical: 16,
                             ),
                           ),
                           items: books.map((book) {
@@ -427,8 +430,6 @@ class _BorrowScreenState extends State<BorrowScreen> {
                               value: book,
                               child: Text(
                                 '${book.title} (${book.author})',
-                                overflow: TextOverflow.ellipsis,
-                                softWrap: false,
                               ),
                             );
                           }).toList(),
