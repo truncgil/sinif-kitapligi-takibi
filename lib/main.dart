@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/student/student_screen.dart';
 import 'screens/book/book_screen.dart';
 import 'screens/borrow/borrow_screen.dart';
 import 'screens/history/history_screen.dart';
 import 'services/database/database_service.dart';
+import 'services/purchase_service.dart';
 import 'providers/library_provider.dart';
+import 'providers/book_limit_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +25,8 @@ void main() async {
   }
 
   final databaseService = DatabaseService();
+  final prefs = await SharedPreferences.getInstance();
+  final purchaseService = PurchaseService(prefs);
 
   // Veritabanını sıfırlamak yerine varolan veritabanını kullan
   await databaseService.initialize();
@@ -32,8 +37,15 @@ void main() async {
         Provider<DatabaseService>(
           create: (_) => databaseService,
         ),
+        Provider<PurchaseService>(
+          create: (_) => purchaseService,
+        ),
         ChangeNotifierProvider(
           create: (context) => LibraryProvider(databaseService),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              BookLimitProvider(purchaseService, databaseService),
         ),
       ],
       child: const MyApp(),

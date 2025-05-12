@@ -4,6 +4,7 @@ import '../../models/book.dart';
 import '../../services/database/database_service.dart';
 import '../../services/barcode_scanner/barcode_scanner_service.dart';
 import '../../constants/colors.dart';
+import '../../providers/book_limit_provider.dart';
 import 'book_detail_screen.dart';
 
 /// Kitap işlemleri ekranı
@@ -425,12 +426,30 @@ class _BookScreenState extends State<BookScreen> {
   }
 
   Future<void> _showAddBookDialog(BuildContext context) async {
+    final bookLimitProvider =
+        Provider.of<BookLimitProvider>(context, listen: false);
+
+    if (!bookLimitProvider.canAddMoreBooks) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Kitap ekleme limitine ulaşıldı (${bookLimitProvider.currentBookCount}/9). Sınırsız kitap eklemek için satın alma yapın.'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+      return;
+    }
+
     final formKey = GlobalKey<FormState>();
     String title = '';
     String author = '';
     String isbn = '';
     String barcode = '';
-    final TextEditingController barcodeController = TextEditingController();
 
     await showDialog(
       context: context,
@@ -438,48 +457,52 @@ class _BookScreenState extends State<BookScreen> {
         title: const Text('Yeni Kitap Ekle'),
         content: Form(
           key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Kitap Adı'),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Kitap adı boş olamaz' : null,
-                onSaved: (value) => title = value ?? '',
-              ),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Yazar'),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Yazar boş olamaz' : null,
-                onSaved: (value) => author = value ?? '',
-              ),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'ISBN'),
-                initialValue: isbn,
-                onSaved: (value) => isbn = value ?? '',
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      decoration: const InputDecoration(labelText: 'Barkod'),
-                      controller: barcodeController,
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Barkod boş olamaz' : null,
-                      onSaved: (value) => barcode = value ?? '',
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.qr_code_scanner),
-                    onPressed: () async {
-                      // Tarama ekranını aç
-                      Navigator.pop(context);
-                      _scanBarcodeAndAddBook();
-                    },
-                  ),
-                ],
-              ),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Kitap Adı'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Lütfen kitap adını girin';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => title = value!,
+                ),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Yazar'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Lütfen yazar adını girin';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => author = value!,
+                ),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'ISBN'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Lütfen ISBN numarasını girin';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => isbn = value!,
+                ),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Barkod'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Lütfen barkod numarasını girin';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => barcode = value!,
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -499,6 +522,7 @@ class _BookScreenState extends State<BookScreen> {
                     barcode: barcode,
                   );
                   await _databaseService.insertBook(book);
+                  await bookLimitProvider.incrementBookCount();
                   _refreshBooks();
                   if (!mounted) return;
                   Navigator.pop(context);

@@ -658,4 +658,155 @@ class DatabaseService {
     ''', [className]);
     return Sqflite.firstIntValue(result) ?? 0;
   }
+
+  /// Örnek 20 kitap ekler
+  Future<void> insertSampleBooks() async {
+    final db = await database;
+    List<Map<String, dynamic>> books = [
+      {
+        'title': 'Suç ve Ceza',
+        'author': 'Fyodor Dostoyevski',
+        'isbn': '9789750719452',
+        'barcode': 'SC001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Sefiller',
+        'author': 'Victor Hugo',
+        'isbn': '9789750719453',
+        'barcode': 'SF001',
+        'isAvailable': 1
+      },
+      {
+        'title': '1984',
+        'author': 'George Orwell',
+        'isbn': '9789750719454',
+        'barcode': '1984001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Dönüşüm',
+        'author': 'Franz Kafka',
+        'isbn': '9789750719455',
+        'barcode': 'DN001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Yüzüklerin Efendisi',
+        'author': 'J.R.R. Tolkien',
+        'isbn': '9789750719456',
+        'barcode': 'YE001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Saatleri Ayarlama Enstitüsü',
+        'author': 'Ahmet Hamdi Tanpınar',
+        'isbn': '9789750719457',
+        'barcode': 'SAE001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Tutunamayanlar',
+        'author': 'Oğuz Atay',
+        'isbn': '9789750719458',
+        'barcode': 'TT001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Kürk Mantolu Madonna',
+        'author': 'Sabahattin Ali',
+        'isbn': '9789750719459',
+        'barcode': 'KMM001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'İnce Memed',
+        'author': 'Yaşar Kemal',
+        'isbn': '9789750719460',
+        'barcode': 'IM001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Çalıkuşu',
+        'author': 'Reşat Nuri Güntekin',
+        'isbn': '9789750719461',
+        'barcode': 'CK001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Fareler ve İnsanlar',
+        'author': 'John Steinbeck',
+        'isbn': '9789750719462',
+        'barcode': 'FI002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Beyaz Diş',
+        'author': 'Jack London',
+        'isbn': '9789750719463',
+        'barcode': 'BD002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Simyacı',
+        'author': 'Paulo Coelho',
+        'isbn': '9789750719464',
+        'barcode': 'SM002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Küçük Prens',
+        'author': 'Antoine de Saint-Exupéry',
+        'isbn': '9789750719465',
+        'barcode': 'KP002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Şeker Portakalı',
+        'author': 'Jose Mauro De Vasconcelos',
+        'isbn': '9789750719466',
+        'barcode': 'SP002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Küçük Kara Balık',
+        'author': 'Samed Behrengi',
+        'isbn': '9789750719467',
+        'barcode': 'KKB002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Martı Jonathan Livingston',
+        'author': 'Richard Bach',
+        'isbn': '9789750719468',
+        'barcode': 'MJL002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Hayvan Çiftliği',
+        'author': 'George Orwell',
+        'isbn': '9789750719469',
+        'barcode': 'HC002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Dönüşüm',
+        'author': 'Franz Kafka',
+        'isbn': '9789750719470',
+        'barcode': 'DN002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Suç ve Ceza',
+        'author': 'Fyodor Dostoyevski',
+        'isbn': '9789750719471',
+        'barcode': 'SC002',
+        'isAvailable': 1
+      }
+    ];
+
+    for (var book in books) {
+      await db.insert('books', book);
+    }
+  }
 }
