@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/library_provider.dart';
 import '../barcode_scanner/barcode_scanner_page.dart';
+import '../../constants/colors.dart';
 
 /// Ana ekran
 class HomeScreen extends StatelessWidget {
@@ -18,8 +19,10 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -40,18 +43,19 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 32),
                 _buildMenuButtons(context),
                 const SizedBox(height: 24),
-                const Row(
+                Row(
                   children: [
                     Icon(
                       Icons.auto_stories,
-                      color: Color(0xFF04BF61),
+                      color: theme.colorScheme.primary,
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
                       'Şu An Okunan Kitaplar',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onBackground,
                       ),
                     ),
                   ],
@@ -69,29 +73,25 @@ class HomeScreen extends StatelessWidget {
             context,
             MaterialPageRoute(builder: (_) => const BarcodeScannerPage()),
           );
-          // Barkod sayfasından dönüşte, ihtiyaç olursa veri yenileme yapılabilir
           if (context.mounted) {
             final provider =
                 Provider.of<LibraryProvider>(context, listen: false);
             await provider.refreshBorrowedBooks();
           }
-          // Barkod döndüyse ve kitap yoksa kitap ekleme dialogunu aç
           if (scannedBarcode != null &&
               scannedBarcode is String &&
               scannedBarcode.isNotEmpty) {
-            // Kitap var mı kontrolü
             final dbService =
                 Provider.of<DatabaseService>(context, listen: false);
             final existingBook =
                 await dbService.getBookByBarcode(scannedBarcode);
             if (existingBook == null) {
-              // Kitap ekleme dialogunu barkod ile aç
               await BookScreen.showAddBookDialogWithBarcode(
                   context, scannedBarcode);
             }
           }
         },
-        backgroundColor: const Color(0xFF04BF61),
+        backgroundColor: theme.colorScheme.primary,
         icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
         label: const Text('Barkod Okut', style: TextStyle(color: Colors.white)),
         elevation: 4,
@@ -101,11 +101,13 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildMenuButtons(BuildContext context) {
+    final theme = Theme.of(context);
+
     final menuItems = [
       {
         'title': 'Ödünç Ver',
         'icon': Icons.add_box,
-        'color': const Color(0xFF04BF61),
+        'color': theme.colorScheme.primary,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const BorrowScreen()),
@@ -114,7 +116,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Sınıflar',
         'icon': Icons.class_,
-        'color': const Color(0xFF04BF61),
+        'color': theme.colorScheme.primary,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ClassRoomScreen()),
@@ -123,7 +125,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Öğrenciler',
         'icon': Icons.people,
-        'color': const Color(0xFF04BF61),
+        'color': theme.colorScheme.primary,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const StudentScreen()),
@@ -132,7 +134,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Kitaplar',
         'icon': Icons.book,
-        'color': const Color(0xFF04BF61),
+        'color': theme.colorScheme.primary,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const BookScreen()),
@@ -141,7 +143,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Geçmiş',
         'icon': Icons.history,
-        'color': const Color(0xFF04BF61),
+        'color': theme.colorScheme.primary,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const HistoryScreen()),
@@ -150,7 +152,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'İstatistik',
         'icon': Icons.bar_chart,
-        'color': const Color(0xFF04BF61),
+        'color': theme.colorScheme.primary,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const StatisticsScreen()),
@@ -245,16 +247,18 @@ class _FlatMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: theme.shadowColor.withOpacity(0.1),
               spreadRadius: 1,
               blurRadius: 4,
               offset: const Offset(0, 2),
@@ -273,9 +277,10 @@ class _FlatMenuButton extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
               ),
             ),
           ],
@@ -296,7 +301,6 @@ class _CurrentlyReadingBooksState extends State<_CurrentlyReadingBooks> {
   @override
   void initState() {
     super.initState();
-    // Post frame callback ile veri yükleme
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadBorrowedBooks();
     });
@@ -323,15 +327,17 @@ class _CurrentlyReadingBooksState extends State<_CurrentlyReadingBooks> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Consumer<LibraryProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading) {
-          return const Center(
+          return Center(
             child: Padding(
-              padding: EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16.0),
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  Color(0xFF04BF61),
+                  theme.colorScheme.primary,
                 ),
               ),
             ),
@@ -346,12 +352,15 @@ class _CurrentlyReadingBooksState extends State<_CurrentlyReadingBooks> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(24),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
               child: Center(
                 child: Text(
                   'Şu an okunan kitap bulunmamaktadır.',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
               ),
             ),
@@ -375,25 +384,36 @@ class _CurrentlyReadingBooksState extends State<_CurrentlyReadingBooks> {
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.all(16),
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFF04BF61),
-                  child: Icon(
+                leading: CircleAvatar(
+                  backgroundColor: theme.colorScheme.primary,
+                  child: const Icon(
                     Icons.book,
                     color: Colors.white,
                   ),
                 ),
                 title: Text(
                   book.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 4),
-                    Text('Öğrenci: $studentName'),
-                    Text('Okuma süresi: ${_formatDuration(borrowDate)}'),
+                    Text(
+                      'Öğrenci: $studentName',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                    Text(
+                      'Okuma süresi: ${_formatDuration(borrowDate)}',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
                   ],
                 ),
               ),
