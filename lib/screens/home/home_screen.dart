@@ -360,8 +360,8 @@ class _CurrentlyReadingBooksState extends State<_CurrentlyReadingBooks> {
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.all(16),
-                leading: CircleAvatar(
-                  backgroundColor: const Color(0xFF04BF61),
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFF04BF61),
                   child: Icon(
                     Icons.book,
                     color: Colors.white,
