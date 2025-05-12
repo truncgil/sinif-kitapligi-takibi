@@ -133,7 +133,7 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
                       key: Key(classRoom.id.toString()),
                       background: Container(
                         color: Colors.red,
-                        alignment: Alignment.centerRight,
+                        alignment: Alignment.centerLeft,
                         padding: const EdgeInsets.only(right: 16),
                         child: const Icon(
                           Icons.delete,
@@ -142,7 +142,7 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
                       ),
                       secondaryBackground: Container(
                         color: Colors.blue,
-                        alignment: Alignment.centerLeft,
+                        alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(left: 16),
                         child: const Icon(
                           Icons.edit,

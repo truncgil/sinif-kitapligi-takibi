@@ -120,7 +120,7 @@ class _StudentScreenState extends State<StudentScreen> {
                       key: Key(student.id.toString()),
                       background: Container(
                         color: Colors.red,
-                        alignment: Alignment.centerRight,
+                        alignment: Alignment.centerLeft,
                         padding: const EdgeInsets.only(right: 16),
                         child: const Icon(
                           Icons.delete,
@@ -129,7 +129,7 @@ class _StudentScreenState extends State<StudentScreen> {
                       ),
                       secondaryBackground: Container(
                         color: Colors.blue,
-                        alignment: Alignment.centerLeft,
+                        alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(left: 16),
                         child: const Icon(
                           Icons.edit,
