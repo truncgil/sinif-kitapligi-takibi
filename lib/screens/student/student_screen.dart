@@ -16,6 +16,7 @@ class _StudentScreenState extends State<StudentScreen> {
   late Future<List<Student>> _studentsFuture;
   late DatabaseService _databaseService;
   late Future<List<ClassRoom>> _classRoomsFuture;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -31,143 +32,206 @@ class _StudentScreenState extends State<StudentScreen> {
     });
   }
 
+  List<Student> _filterStudents(List<Student> students) {
+    if (_searchQuery.isEmpty) return students;
+
+    return students.where((student) {
+      final fullName = '${student.name} ${student.surname}'.toLowerCase();
+      final studentNumber = student.studentNumber.toLowerCase();
+      final className = student.className.toLowerCase();
+      final query = _searchQuery.toLowerCase();
+
+      return fullName.contains(query) ||
+          studentNumber.contains(query) ||
+          className.contains(query);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Öğrenciler'),
       ),
-      body: FutureBuilder<List<Student>>(
-        future: _studentsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Hata: ${snapshot.error}'));
-          }
-
-          final students = snapshot.data ?? [];
-
-          if (students.isEmpty) {
-            return const Center(
-              child: Text('Henüz öğrenci kaydı bulunmamaktadır.'),
-            );
-          }
-
-          return ListView.builder(
-            itemCount: students.length,
-            itemBuilder: (context, index) {
-              final student = students[index];
-              return Dismissible(
-                key: Key(student.id.toString()),
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 16),
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                  ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Öğrenci Ara...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                secondaryBackground: Container(
-                  color: Colors.blue,
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(left: 16),
-                  child: const Icon(
-                    Icons.edit,
-                    color: Colors.white,
-                  ),
-                ),
-                confirmDismiss: (direction) async {
-                  if (direction == DismissDirection.endToStart) {
-                    // Düzenleme işlemi
-                    _showEditStudentDialog(context, student);
-                    return false;
-                  } else {
-                    // Silme işlemi
-                    return await showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: const Text('Öğrenci Silme'),
-                          content: Text(
-                              '${student.name} ${student.surname} öğrencisini silmek istediğinize emin misiniz?'),
-                          actions: <Widget>[
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('İptal'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text(
-                                'Sil',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ),
-                          ],
-                        );
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Student>>(
+              future: _studentsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Hata: ${snapshot.error}'));
+                }
+
+                final students = snapshot.data ?? [];
+                final filteredStudents = _filterStudents(students);
+
+                if (filteredStudents.isEmpty) {
+                  return const Center(
+                    child: Text('Arama kriterlerine uygun öğrenci bulunamadı.'),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: filteredStudents.length,
+                  itemBuilder: (context, index) {
+                    final student = filteredStudents[index];
+                    return Dismissible(
+                      key: Key(student.id.toString()),
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 16),
+                        child: const Icon(
+                          Icons.delete,
+                          color: Colors.white,
+                        ),
+                      ),
+                      secondaryBackground: Container(
+                        color: Colors.blue,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 16),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                        ),
+                      ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.endToStart) {
+                          // Düzenleme işlemi
+                          _showEditStudentDialog(context, student);
+                          return false;
+                        } else {
+                          // Silme işlemi
+                          return await showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Öğrenci Silme'),
+                                content: Text(
+                                    '${student.name} ${student.surname} öğrencisini silmek istediğinize emin misiniz?'),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text('İptal'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text(
+                                      'Sil',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        }
                       },
+                      onDismissed: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          try {
+                            await _databaseService.deleteStudent(student.id!);
+                            _refreshStudents();
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    '${student.name} ${student.surname} başarıyla silindi'),
+                                backgroundColor: Colors.green,
+                                behavior: SnackBarBehavior.floating,
+                                margin: const EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Öğrenci silinirken bir hata oluştu: $e'),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                                margin: const EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.person),
+                          ),
+                          title: Text('${student.name} ${student.surname}'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Sınıf: ${student.className}'),
+                              Text('Öğrenci No: ${student.studentNumber}'),
+                              FutureBuilder<int>(
+                                future: _databaseService
+                                    .getActiveBorrowCountByStudentId(
+                                        student.id!),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return const Text('Yükleniyor...');
+                                  }
+                                  final borrowCount = snapshot.data ?? 0;
+                                  return Text(
+                                    'Ödünç Alınan Kitap: $borrowCount',
+                                    style: TextStyle(
+                                      color: borrowCount > 0
+                                          ? Colors.blue
+                                          : Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     );
-                  }
-                },
-                onDismissed: (direction) async {
-                  if (direction == DismissDirection.startToEnd) {
-                    try {
-                      await _databaseService.deleteStudent(student.id!);
-                      _refreshStudents();
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              '${student.name} ${student.surname} başarıyla silindi'),
-                          backgroundColor: Colors.green,
-                          behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.all(8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content:
-                              Text('Öğrenci silinirken bir hata oluştu: $e'),
-                          backgroundColor: Colors.red,
-                          behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.all(8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: Card(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.person),
-                    ),
-                    title: Text('${student.name} ${student.surname}'),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Sınıf: ${student.className}'),
-                        Text('Öğrenci No: ${student.studentNumber}'),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddStudentDialog(context),

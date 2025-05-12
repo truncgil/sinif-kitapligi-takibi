@@ -6,6 +6,7 @@ import '../../models/student.dart';
 import '../../models/book.dart';
 import '../../models/borrow_record.dart';
 import '../../models/class_room.dart';
+import 'package:sqflite/sqflite.dart';
 
 /// Veritabanı işlemlerini yöneten servis sınıfı
 class DatabaseService {
@@ -619,5 +620,25 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [borrowRecordId],
     );
+  }
+
+  Future<List<BorrowRecord>> getBorrowRecordsByStudentId(int studentId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'borrow_records',
+      where: 'studentId = ? AND isReturned = 0',
+      whereArgs: [studentId],
+    );
+    return List.generate(maps.length, (i) => BorrowRecord.fromMap(maps[i]));
+  }
+
+  Future<int> getActiveBorrowCountByStudentId(int studentId) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM borrow_records 
+      WHERE studentId = ? AND isReturned = 0
+    ''', [studentId]);
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 }
