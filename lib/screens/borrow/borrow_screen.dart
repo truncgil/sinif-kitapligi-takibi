@@ -251,48 +251,35 @@ class _BorrowScreenState extends State<BorrowScreen> {
 
                         return DropdownButtonFormField<Student>(
                           value: selectedStudent,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF04BF61),
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF04BF61),
-                                width: 1.0,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF04BF61),
-                                width: 2.0,
-                              ),
-                            ),
-                            hintText: 'Öğrenci seçin',
-                            hintStyle: TextStyle(
-                              color: Colors.grey[600],
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 16,
-                            ),
+                          decoration: const InputDecoration(
+                            labelText: 'Öğrenci Seçin',
+                            border: OutlineInputBorder(),
                           ),
                           items: students.map((student) {
-                            return DropdownMenuItem(
+                            return DropdownMenuItem<Student>(
                               value: student,
                               child: Text(
-                                '${student.name} ${student.surname} (${student.className})',
-                              ),
+                                  '${student.name} ${student.surname} - ${student.className}'),
                             );
                           }).toList(),
-                          onChanged: (value) {
+                          onChanged: (Student? value) {
                             setState(() {
                               selectedStudent = value;
                             });
+                          },
+                          validator: (value) =>
+                              value == null ? 'Lütfen bir öğrenci seçin' : null,
+                          isExpanded: true,
+                          selectedItemBuilder: (BuildContext context) {
+                            return students.map<Widget>((Student student) {
+                              return Text(
+                                '${student.name} ${student.surname} - ${student.className}',
+                                style: const TextStyle(
+                                  color: Color(0xFF04BF61),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            }).toList();
                           },
                         );
                       },
@@ -379,75 +366,40 @@ class _BorrowScreenState extends State<BorrowScreen> {
 
                         if (books.isEmpty) {
                           return const Center(
-                            child: Text(
-                                'Ödünç verilebilecek kitap bulunmamaktadır.'),
+                            child: Text('Mevcut kitap bulunmamaktadır.'),
                           );
-                        }
-
-                        if (selectedBook != null) {
-                          if (!books
-                                  .any((book) => book.id == selectedBook!.id) &&
-                              selectedBook!.isAvailable) {
-                            books.add(selectedBook!);
-                          }
                         }
 
                         return DropdownButtonFormField<Book>(
                           value: selectedBook,
-                          isExpanded: true,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF04BF61),
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF04BF61),
-                                width: 1.0,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF04BF61),
-                                width: 2.0,
-                              ),
-                            ),
-                            hintText: 'Kitap seçin',
-                            hintStyle: TextStyle(
-                              color: Colors.grey[600],
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 16,
-                            ),
+                          decoration: const InputDecoration(
+                            labelText: 'Kitap Seçin',
+                            border: OutlineInputBorder(),
                           ),
                           items: books.map((book) {
-                            return DropdownMenuItem(
+                            return DropdownMenuItem<Book>(
                               value: book,
-                              child: Text(
-                                '${book.title} (${book.author})',
-                              ),
+                              child: Text('${book.title} - ${book.author}'),
                             );
                           }).toList(),
+                          onChanged: (Book? value) {
+                            setState(() {
+                              selectedBook = value;
+                            });
+                          },
+                          validator: (value) =>
+                              value == null ? 'Lütfen bir kitap seçin' : null,
+                          isExpanded: true,
                           selectedItemBuilder: (BuildContext context) {
                             return books.map<Widget>((Book book) {
                               return Text(
-                                '${book.title} (${book.author})',
+                                '${book.title} - ${book.author}',
                                 style: const TextStyle(
                                   color: Color(0xFF04BF61),
                                   fontWeight: FontWeight.bold,
                                 ),
                               );
                             }).toList();
-                          },
-                          onChanged: (value) {
-                            setState(() {
-                              selectedBook = value;
-                            });
                           },
                         );
                       },
