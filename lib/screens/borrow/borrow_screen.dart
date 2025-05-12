@@ -56,27 +56,23 @@ class _BorrowScreenState extends State<BorrowScreen> {
   Future<void> _loadBookByBarcode(String barcode) async {
     try {
       final book = await _databaseService.getBookByBarcode(barcode);
-      if (book != null && book.isAvailable) {
+      if (book != null) {
         setState(() {
           selectedBook = book;
         });
 
+        // Kitap listesini güncelle
         _availableBooksFuture = _databaseService.getAllBooks().then((books) {
           final availableBooks =
               books.where((book) => book.isAvailable).toList();
-          if (selectedBook != null &&
-              !availableBooks.any((b) => b.id == selectedBook!.id)) {
+          if (!availableBooks.any((b) => b.barcode == selectedBook!.barcode)) {
             availableBooks.add(selectedBook!);
           }
           return availableBooks;
         });
       } else {
         if (!mounted) return;
-        _showErrorMessage(
-          book == null
-              ? 'Kitap bulunamadı'
-              : 'Bu kitap şu anda ödünç verilmiş durumda',
-        );
+        _showErrorMessage('Kitap bulunamadı');
       }
     } catch (e) {
       if (!mounted) return;
@@ -86,12 +82,16 @@ class _BorrowScreenState extends State<BorrowScreen> {
 
   Future<void> _scanBarcode() async {
     try {
-      await Navigator.push(
+      final result = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => const BarcodeScannerPage(),
         ),
       );
+
+      if (result != null && result is String) {
+        await _loadBookByBarcode(result);
+      }
 
       // Barkod tarayıcıdan döndükten sonra verileri yeniliyoruz
       _refreshData();
@@ -433,6 +433,17 @@ class _BorrowScreenState extends State<BorrowScreen> {
                               ),
                             );
                           }).toList(),
+                          selectedItemBuilder: (BuildContext context) {
+                            return books.map<Widget>((Book book) {
+                              return Text(
+                                '${book.title} (${book.author})',
+                                style: const TextStyle(
+                                  color: Color(0xFF04BF61),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            }).toList();
+                          },
                           onChanged: (value) {
                             setState(() {
                               selectedBook = value;

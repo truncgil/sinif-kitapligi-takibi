@@ -39,4 +39,13 @@ class Book {
       isAvailable: (map['isAvailable'] as int) == 1,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Book && other.barcode == barcode;
+  }
+
+  @override
+  int get hashCode => barcode.hashCode;
 }
