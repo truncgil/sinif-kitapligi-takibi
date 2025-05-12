@@ -82,12 +82,27 @@ class _BackupScreenState extends State<BackupScreen> {
       final backupPath = await _backupService.backupDatabase();
       _loadBackupsList();
       _showSuccessSnackbar('Yedekleme başarılı: ${path.basename(backupPath)}');
+
+      // Veritabanı güncellendiği için Provider'ı da güncelle
+      if (mounted) {
+        final provider = Provider.of<LibraryProvider>(context, listen: false);
+        await provider.refreshBorrowedBooks();
+      }
+
+      // Kısa bir süre bekleyip ana sayfaya dön
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (mounted) {
+        // Ana sayfaya dön
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } catch (e) {
       _showErrorSnackbar('Yedekleme sırasında hata oluştu: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -357,40 +372,112 @@ class _BackupScreenState extends State<BackupScreen> {
                     final backup = _backups[index];
                     final fileName = path.basename(backup.path);
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 4.0),
-                      child: ListTile(
-                        title: Text(
-                          fileName,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
+                    return Dismissible(
+                      key: Key(backup.path),
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(right: 16),
+                        child: const Icon(
+                          Icons.delete,
+                          color: Colors.white,
                         ),
-                        subtitle: Text(
-                          '${_formatFileDate(backup)} - ${_formatFileSize(backup)}',
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      secondaryBackground: Container(
+                        color: Colors.blue,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(left: 16),
+                        child: const Icon(
+                          Icons.save_alt,
+                          color: Colors.white,
                         ),
-                        leading: const Icon(Icons.storage),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.restore),
-                              tooltip: 'Geri Yükle',
-                              onPressed: () => _restoreBackup(backup.path),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.save_alt),
-                              tooltip: 'Cihaz Belleğine Kaydet',
-                              onPressed: () =>
-                                  _exportToDownloadFolder(backup.path),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              tooltip: 'Sil',
-                              onPressed: () => _deleteBackup(backup.path),
-                            ),
-                          ],
+                      ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.endToStart) {
+                          // Dışa aktarma işlemi
+                          await _exportToDownloadFolder(backup.path);
+                          return false;
+                        } else {
+                          // Silme işlemi
+                          return await showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Yedeği Sil'),
+                                content: Text(
+                                    '$fileName yedeğini silmek istediğinize emin misiniz?'),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text('İptal'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text(
+                                      'Sil',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        }
+                      },
+                      onDismissed: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          try {
+                            await _deleteBackup(backup.path);
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('$fileName başarıyla silindi'),
+                                backgroundColor: Colors.green,
+                                behavior: SnackBarBehavior.floating,
+                                margin: const EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Yedek silinirken bir hata oluştu: $e'),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                                margin: const EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 4.0),
+                        child: ListTile(
+                          title: Text(
+                            fileName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '${_formatFileDate(backup)} - ${_formatFileSize(backup)}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          leading: const Icon(Icons.storage),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.restore),
+                            tooltip: 'Geri Yükle',
+                            onPressed: () => _restoreBackup(backup.path),
+                          ),
                         ),
                       ),
                     );

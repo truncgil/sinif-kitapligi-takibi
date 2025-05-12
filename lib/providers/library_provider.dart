@@ -14,6 +14,15 @@ class LibraryProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get borrowedBooks => _borrowedBooks ?? [];
   bool get isLoading => _isLoading;
 
+  Future<void> initializeDatabase() async {
+    try {
+      await _databaseService.initialize();
+      await refreshBorrowedBooks();
+    } catch (e) {
+      debugPrint('Veritabanı başlatılırken hata: $e');
+    }
+  }
+
   Future<void> refreshBorrowedBooks() async {
     try {
       _isLoading = true;
