@@ -5,6 +5,9 @@ import '../../models/borrow_record.dart';
 import '../../models/book.dart';
 import '../../services/database/database_service.dart';
 import '../../constants/colors.dart';
+import '../barcode_scanner/barcode_scanner_page.dart';
+import '../borrow/borrow_screen.dart';
+import '../../providers/library_provider.dart';
 
 class StudentDetailScreen extends StatefulWidget {
   final Student student;
@@ -36,6 +39,134 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
     });
   }
 
+  /// Barkod tarayıcıyı açar ve sonucu işler
+  Future<void> _scanBarcodeAndBorrow() async {
+    try {
+      final barcode = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const BarcodeScannerPage(),
+        ),
+      );
+
+      if (barcode != null && barcode is String && barcode.isNotEmpty) {
+        final book = await _databaseService.getBookByBarcode(barcode);
+
+        if (book != null) {
+          if (!book.isAvailable) {
+            _showErrorMessage('Bu kitap şu anda mevcut değil');
+            return;
+          }
+
+          // Onay diyaloğu göster
+          if (!mounted) return;
+          final bool? confirm = await showDialog<bool>(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Kitap Ödünç Ver'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Kitap: ${book.title}'),
+                    Text('Yazar: ${book.author}'),
+                    const SizedBox(height: 16),
+                    Text(
+                        'Öğrenci: ${widget.student.name} ${widget.student.surname}'),
+                    Text('Sınıf: ${widget.student.className}'),
+                    const SizedBox(height: 16),
+                    const Text('Bu kitabı ödünç vermek istiyor musunuz?'),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('İptal'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Ödünç Ver'),
+                  ),
+                ],
+              );
+            },
+          );
+
+          if (confirm == true) {
+            // Ödünç verme işlemini gerçekleştir
+            final borrowRecord = BorrowRecord(
+              studentId: widget.student.id!,
+              bookId: book.id!,
+              borrowDate: DateTime.now(),
+            );
+
+            await _databaseService.insertBorrowRecord(borrowRecord);
+            await _databaseService.updateBookAvailability(book.id!, false);
+            _loadBorrowRecords();
+
+            // Provider'ı güncelle
+            if (!mounted) return;
+            final provider =
+                Provider.of<LibraryProvider>(context, listen: false);
+            await provider.refreshBorrowedBooks();
+
+            if (!mounted) return;
+            _showSuccessMessage('Kitap başarıyla ödünç verildi');
+          }
+        } else {
+          if (!mounted) return;
+          _showErrorMessage('Kitap bulunamadı');
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorMessage('İşlem sırasında bir hata oluştu: $e');
+    }
+  }
+
+  /// Kitap seçerek ödünç verme ekranına gider
+  void _navigateToBorrowScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BorrowScreen(
+          initialStudentNumber: widget.student.studentNumber,
+        ),
+      ),
+    ).then((_) => _loadBorrowRecords());
+  }
+
+  void _showErrorMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  void _showSuccessMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF04BF61),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +196,37 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                       '${widget.student.name} ${widget.student.surname}'),
                   _buildInfoRow('Öğrenci No', widget.student.studentNumber),
                   _buildInfoRow('Sınıf', widget.student.className),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _scanBarcodeAndBorrow,
+                          icon: const Icon(Icons.qr_code_scanner),
+                          label: const Text('Barkod Okutarak\nÖdünç Ver'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.secondary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _navigateToBorrowScreen,
+                          icon: const Icon(Icons.book),
+                          label: const Text('Kitap Seçerek\nÖdünç Ver'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF04BF61),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

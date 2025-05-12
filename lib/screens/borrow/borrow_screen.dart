@@ -8,13 +8,15 @@ import '../../providers/library_provider.dart';
 import '../barcode_scanner/barcode_scanner_page.dart';
 import '../../constants/colors.dart';
 
-/// Kitap ödünç verme ekranı
+/// Kitap ödünç verme ekranı - Wizard tarzı arayüz
 class BorrowScreen extends StatefulWidget {
   final String? initialBarcode;
+  final String? initialStudentNumber;
 
   const BorrowScreen({
     super.key,
     this.initialBarcode,
+    this.initialStudentNumber,
   });
 
   @override
@@ -22,11 +24,19 @@ class BorrowScreen extends StatefulWidget {
 }
 
 class _BorrowScreenState extends State<BorrowScreen> {
+  // Wizard adımları
+  static const int BOOK_SELECTION = 0;
+  static const int STUDENT_SELECTION = 1;
+  static const int CONFIRMATION = 2;
+
+  int _currentStep = BOOK_SELECTION;
+
   Student? selectedStudent;
   Book? selectedBook;
   late DatabaseService _databaseService;
   late Future<List<Student>> _studentsFuture;
   late Future<List<Book>> _availableBooksFuture;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -37,6 +47,13 @@ class _BorrowScreenState extends State<BorrowScreen> {
     // Eğer başlangıç barkodu varsa, o kitabı seç
     if (widget.initialBarcode != null && widget.initialBarcode!.isNotEmpty) {
       _loadBookByBarcode(widget.initialBarcode!);
+    }
+
+    // Eğer başlangıç öğrenci numarası varsa, o öğrenciyi seç ve ikinci adıma geç
+    if (widget.initialStudentNumber != null &&
+        widget.initialStudentNumber!.isNotEmpty) {
+      _loadStudentByNumber(widget.initialStudentNumber!);
+      _currentStep = STUDENT_SELECTION;
     }
   }
 
@@ -54,23 +71,64 @@ class _BorrowScreenState extends State<BorrowScreen> {
     });
   }
 
+  // Sonraki adıma geç
+  void _nextStep() {
+    if (_currentStep < CONFIRMATION) {
+      setState(() {
+        _currentStep++;
+      });
+    } else {
+      _borrowBook();
+    }
+  }
+
+  // Önceki adıma dön
+  void _previousStep() {
+    if (_currentStep > BOOK_SELECTION) {
+      setState(() {
+        _currentStep--;
+      });
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
+  // Mevcut adımı kontrol edip ilerleyip ilerleyemeyeceğini belirle
+  bool _canProceed() {
+    switch (_currentStep) {
+      case BOOK_SELECTION:
+        return selectedBook != null;
+      case STUDENT_SELECTION:
+        return selectedStudent != null;
+      case CONFIRMATION:
+        return !_isProcessing;
+      default:
+        return false;
+    }
+  }
+
   Future<void> _loadBookByBarcode(String barcode) async {
     try {
       final book = await _databaseService.getBookByBarcode(barcode);
       if (book != null) {
+        if (!book.isAvailable) {
+          _showErrorMessage('Bu kitap şu anda mevcut değil');
+          return;
+        }
+
         setState(() {
           selectedBook = book;
         });
 
-        // Kitap listesini güncelle
-        _availableBooksFuture = _databaseService.getAllBooks().then((books) {
-          final availableBooks =
-              books.where((book) => book.isAvailable).toList();
-          if (!availableBooks.any((b) => b.barcode == selectedBook!.barcode)) {
-            availableBooks.add(selectedBook!);
-          }
-          return availableBooks;
-        });
+        // Eğer öğrenci zaten seçiliyse, direkt olarak onay adımına geç
+        if (selectedStudent != null) {
+          setState(() {
+            _currentStep = CONFIRMATION;
+          });
+        } else if (_currentStep == BOOK_SELECTION) {
+          // Sonraki adıma geç
+          _nextStep();
+        }
       } else {
         if (!mounted) return;
         _showErrorMessage('Kitap bulunamadı');
@@ -90,15 +148,36 @@ class _BorrowScreenState extends State<BorrowScreen> {
         ),
       );
 
-      if (result != null && result is String) {
+      if (result != null && result is String && result.isNotEmpty) {
         await _loadBookByBarcode(result);
       }
-
-      // Barkod tarayıcıdan döndükten sonra verileri yeniliyoruz
-      _refreshData();
     } catch (e) {
       if (!mounted) return;
       _showErrorMessage('Barkod okuma işlemi başarısız oldu: $e');
+    }
+  }
+
+  Future<void> _loadStudentByNumber(String studentNumber) async {
+    try {
+      final students = await _databaseService.getAllStudents();
+      final student = students.firstWhere(
+        (s) => s.studentNumber == studentNumber,
+        orElse: () => throw Exception('Öğrenci bulunamadı'),
+      );
+
+      setState(() {
+        selectedStudent = student;
+      });
+
+      // Eğer kitap da seçilmişse, doğrudan onay adımına geç
+      if (selectedBook != null) {
+        setState(() {
+          _currentStep = CONFIRMATION;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorMessage('Öğrenci yüklenirken hata oluştu: $e');
     }
   }
 
@@ -138,6 +217,10 @@ class _BorrowScreenState extends State<BorrowScreen> {
       return;
     }
 
+    setState(() {
+      _isProcessing = true;
+    });
+
     try {
       final borrowRecord = BorrowRecord(
         studentId: selectedStudent!.id!,
@@ -148,10 +231,6 @@ class _BorrowScreenState extends State<BorrowScreen> {
       await _databaseService.insertBorrowRecord(borrowRecord);
       await _databaseService.updateBookAvailability(selectedBook!.id!, false);
 
-      // Önce navigasyonu yap, sonra provider'ı güncelle
-      if (!mounted) return;
-      Navigator.pop(context);
-
       // Provider'ı güncelle
       if (!mounted) return;
       final provider = Provider.of<LibraryProvider>(context, listen: false);
@@ -159,10 +238,479 @@ class _BorrowScreenState extends State<BorrowScreen> {
 
       if (!mounted) return;
       _showSuccessMessage('Kitap başarıyla ödünç verildi');
+
+      // Sayfayı kapat
+      if (!mounted) return;
+      Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       _showErrorMessage('Kitap ödünç verme işlemi başarısız oldu: $e');
+      setState(() {
+        _isProcessing = false;
+      });
     }
+  }
+
+  // Kitap seçim sayfası
+  Widget _buildBookSelectionStep() {
+    return FutureBuilder<List<Book>>(
+      future: _availableBooksFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(0xFF04BF61),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Hata: ${snapshot.error}'));
+        }
+
+        final books = snapshot.data ?? [];
+
+        if (books.isEmpty) {
+          return const Center(
+            child: Text('Mevcut kitap bulunmamaktadır.'),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Kitap Seçimi',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _scanBarcode,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF04BF61),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.qr_code_scanner, size: 20),
+                    label: const Text('Barkod Okut',
+                        style: TextStyle(fontSize: 14)),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: books.length,
+                itemBuilder: (context, index) {
+                  final book = books[index];
+                  final bool isSelected = selectedBook?.id == book.id;
+
+                  return Card(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    elevation: isSelected ? 4 : 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: isSelected
+                            ? const Color(0xFF04BF61)
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          selectedBook = book;
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE0F2F1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.book,
+                                color: isSelected
+                                    ? const Color(0xFF04BF61)
+                                    : Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    book.title,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: isSelected
+                                          ? const Color(0xFF04BF61)
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    book.author,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? const Color(0xFF04BF61)
+                                          : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  if (book.barcode.isNotEmpty)
+                                    Text(
+                                      'Barkod: ${book.barcode}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isSelected
+                                            ? const Color(0xFF04BF61)
+                                            : Colors.grey,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(
+                                Icons.check_circle,
+                                color: Color(0xFF04BF61),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Öğrenci seçim sayfası
+  Widget _buildStudentSelectionStep() {
+    return FutureBuilder<List<Student>>(
+      future: _studentsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(0xFF04BF61),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Hata: ${snapshot.error}'));
+        }
+
+        final students = snapshot.data ?? [];
+
+        if (students.isEmpty) {
+          return const Center(
+            child: Text('Henüz öğrenci kaydı bulunmamaktadır.'),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Öğrenci Seçimi',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Öğrenci ara...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  // Arama fonksiyonu buraya eklenebilir
+                },
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: students.length,
+                itemBuilder: (context, index) {
+                  final student = students[index];
+                  final bool isSelected = selectedStudent?.id == student.id;
+
+                  return Card(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    elevation: isSelected ? 4 : 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: isSelected
+                            ? const Color(0xFF04BF61)
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          selectedStudent = student;
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE0F2F1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.person,
+                                color: isSelected
+                                    ? const Color(0xFF04BF61)
+                                    : Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${student.name} ${student.surname}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: isSelected
+                                          ? const Color(0xFF04BF61)
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Sınıf: ${student.className}',
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? const Color(0xFF04BF61)
+                                          : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Numara: ${student.studentNumber}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isSelected
+                                          ? const Color(0xFF04BF61)
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(
+                                Icons.check_circle,
+                                color: Color(0xFF04BF61),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Onay sayfası
+  Widget _buildConfirmationStep() {
+    if (selectedBook == null || selectedStudent == null) {
+      return const Center(
+        child: Text('Lütfen önce kitap ve öğrenci seçin.'),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Ödünç Verme İşlemini Onayla',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Kitap Bilgileri',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF04BF61),
+                    ),
+                  ),
+                  const Divider(),
+                  _buildInfoRow('Kitap Adı', selectedBook!.title),
+                  _buildInfoRow('Yazar', selectedBook!.author),
+                  if (selectedBook!.barcode.isNotEmpty)
+                    _buildInfoRow('Barkod', selectedBook!.barcode),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Öğrenci Bilgileri',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF04BF61),
+                    ),
+                  ),
+                  const Divider(),
+                  _buildInfoRow('Ad Soyad',
+                      '${selectedStudent!.name} ${selectedStudent!.surname}'),
+                  _buildInfoRow('Sınıf', selectedStudent!.className),
+                  _buildInfoRow('Öğrenci No', selectedStudent!.studentNumber),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'İşlem Bilgileri',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF04BF61),
+                    ),
+                  ),
+                  const Divider(),
+                  _buildInfoRow('İşlem', 'Kitap Ödünç Verme'),
+                  _buildInfoRow('Tarih', _formatDate(DateTime.now())),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          if (_isProcessing)
+            const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Color(0xFF04BF61),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
   }
 
   @override
@@ -171,278 +719,165 @@ class _BorrowScreenState extends State<BorrowScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        title: const Text(
-          'Kitap Ödünç Ver',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          _getAppBarTitle(),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _previousStep,
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.person,
-                          color: Color(0xFF04BF61),
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Öğrenci Seç',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    FutureBuilder<List<Student>>(
-                      future: _studentsFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Color(0xFF04BF61),
-                            ),
-                          ));
-                        }
-
-                        if (snapshot.hasError) {
-                          return Center(child: Text('Hata: ${snapshot.error}'));
-                        }
-
-                        final students = snapshot.data ?? [];
-
-                        if (students.isEmpty) {
-                          return const Center(
-                            child: Text('Henüz öğrenci kaydı bulunmamaktadır.'),
-                          );
-                        }
-
-                        // Seçilen öğrenci listede yoksa, null yap
-                        if (selectedStudent != null) {
-                          bool studentInList = false;
-                          for (var student in students) {
-                            if (student.id == selectedStudent!.id) {
-                              studentInList = true;
-                              break;
-                            }
-                          }
-
-                          if (!studentInList) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              setState(() {
-                                selectedStudent = null;
-                              });
-                            });
-                          }
-                        }
-
-                        return DropdownButtonFormField<Student>(
-                          value: selectedStudent,
-                          decoration: const InputDecoration(
-                            labelText: 'Öğrenci Seçin',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: students.map((student) {
-                            return DropdownMenuItem<Student>(
-                              value: student,
-                              child: Text(
-                                  '${student.name} ${student.surname} - ${student.className}'),
-                            );
-                          }).toList(),
-                          onChanged: (Student? value) {
-                            setState(() {
-                              selectedStudent = value;
-                            });
-                          },
-                          validator: (value) =>
-                              value == null ? 'Lütfen bir öğrenci seçin' : null,
-                          isExpanded: true,
-                          selectedItemBuilder: (BuildContext context) {
-                            return students.map<Widget>((Student student) {
-                              return Text(
-                                '${student.name} ${student.surname} - ${student.className}',
-                                style: const TextStyle(
-                                  color: Color(0xFF04BF61),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              );
-                            }).toList();
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
+      body: Column(
+        children: [
+          // İlerleme göstergesi
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                _buildStepIndicator(BOOK_SELECTION, 'Kitap'),
+                _buildStepConnector(_currentStep > BOOK_SELECTION),
+                _buildStepIndicator(STUDENT_SELECTION, 'Öğrenci'),
+                _buildStepConnector(_currentStep > STUDENT_SELECTION),
+                _buildStepIndicator(CONFIRMATION, 'Onay'),
+              ],
             ),
-            const SizedBox(height: 16),
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.book,
-                                color: Color(0xFF04BF61),
-                              ),
-                              SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  'Kitap Seç',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          onPressed: _scanBarcode,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF04BF61),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                          ),
-                          icon: const Icon(Icons.qr_code_scanner, size: 20),
-                          label: const Text('Barkod Okut',
-                              style: TextStyle(fontSize: 14)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    FutureBuilder<List<Book>>(
-                      future: _availableBooksFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Color(0xFF04BF61),
-                            ),
-                          ));
-                        }
+          ),
 
-                        if (snapshot.hasError) {
-                          return Center(child: Text('Hata: ${snapshot.error}'));
-                        }
-
-                        final books = snapshot.data ?? [];
-
-                        if (books.isEmpty) {
-                          return const Center(
-                            child: Text('Mevcut kitap bulunmamaktadır.'),
-                          );
-                        }
-
-                        return DropdownButtonFormField<Book>(
-                          value: selectedBook,
-                          decoration: const InputDecoration(
-                            labelText: 'Kitap Seçin',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: books.map((book) {
-                            return DropdownMenuItem<Book>(
-                              value: book,
-                              child: Text('${book.title} - ${book.author}'),
-                            );
-                          }).toList(),
-                          onChanged: (Book? value) {
-                            setState(() {
-                              selectedBook = value;
-                            });
-                          },
-                          validator: (value) =>
-                              value == null ? 'Lütfen bir kitap seçin' : null,
-                          isExpanded: true,
-                          selectedItemBuilder: (BuildContext context) {
-                            return books.map<Widget>((Book book) {
-                              return Text(
-                                '${book.title} - ${book.author}',
-                                style: const TextStyle(
-                                  color: Color(0xFF04BF61),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              );
-                            }).toList();
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
+          // Ana içerik
+          Expanded(
+            child: IndexedStack(
+              index: _currentStep,
+              children: [
+                _buildBookSelectionStep(),
+                _buildStudentSelectionStep(),
+                _buildConfirmationStep(),
+              ],
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: selectedStudent != null && selectedBook != null
-                  ? _borrowBook
+          ),
+
+          // Alt kontroller
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton.icon(
+                  onPressed: _previousStep,
+                  icon: const Icon(Icons.arrow_back),
+                  label:
+                      Text(_currentStep == BOOK_SELECTION ? 'İptal' : 'Geri'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey.shade700,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _canProceed() ? _nextStep : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF04BF61),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    _getNextButtonText(),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getAppBarTitle() {
+    switch (_currentStep) {
+      case BOOK_SELECTION:
+        return 'Kitap Seç';
+      case STUDENT_SELECTION:
+        return 'Öğrenci Seç';
+      case CONFIRMATION:
+        return 'Ödünç Ver';
+      default:
+        return 'Kitap Ödünç Ver';
+    }
+  }
+
+  String _getNextButtonText() {
+    switch (_currentStep) {
+      case BOOK_SELECTION:
+        return 'Devam Et';
+      case STUDENT_SELECTION:
+        return 'Devam Et';
+      case CONFIRMATION:
+        return 'Ödünç Ver';
+      default:
+        return 'Devam Et';
+    }
+  }
+
+  Widget _buildStepIndicator(int step, String label) {
+    final bool isActive = _currentStep >= step;
+    final bool isCurrent = _currentStep == step;
+
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: isActive ? const Color(0xFF04BF61) : Colors.grey.shade300,
+              shape: BoxShape.circle,
+              border: isCurrent
+                  ? Border.all(color: const Color(0xFF04BF61), width: 3)
                   : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF04BF61),
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey,
-                padding: const EdgeInsets.all(16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.done,
-                    size: 24,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Ödünç Ver',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
             ),
-          ],
-        ),
+            child: Center(
+              child: isActive
+                  ? const Icon(Icons.check, color: Colors.white, size: 16)
+                  : Text(
+                      '${step + 1}',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? const Color(0xFF04BF61) : Colors.grey,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildStepConnector(bool isActive) {
+    return Container(
+      width: 20,
+      height: 2,
+      color: isActive ? const Color(0xFF04BF61) : Colors.grey.shade300,
     );
   }
 }
