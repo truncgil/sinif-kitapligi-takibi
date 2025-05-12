@@ -171,92 +171,80 @@ class _BookScreenState extends State<BookScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Kitap ara...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Row(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
               children: [
-                Expanded(
-                  child: ChoiceChip(
-                    label: const Text('Tümü'),
-                    selected: _filterStatus == 'Tümü',
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _filterStatus = 'Tümü';
-                        });
-                      }
-                    },
-                    backgroundColor: Colors.grey[200],
-                    selectedColor: const Color(0xFF04BF61),
-                    labelStyle: TextStyle(
-                      color:
-                          _filterStatus == 'Tümü' ? Colors.white : Colors.black,
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Kitap ara...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ChoiceChip(
-                    label: const Text('Mevcut'),
-                    selected: _filterStatus == 'Mevcut',
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _filterStatus = 'Mevcut';
-                        });
-                      }
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ToggleButtons(
+                    isSelected: [
+                      _filterStatus == 'Tümü',
+                      _filterStatus == 'Mevcut',
+                      _filterStatus == 'Ödünç Verildi',
+                    ],
+                    onPressed: (index) {
+                      setState(() {
+                        switch (index) {
+                          case 0:
+                            _filterStatus = 'Tümü';
+                            break;
+                          case 1:
+                            _filterStatus = 'Mevcut';
+                            break;
+                          case 2:
+                            _filterStatus = 'Ödünç Verildi';
+                            break;
+                        }
+                      });
                     },
-                    backgroundColor: Colors.grey[200],
-                    selectedColor: const Color(0xFF04BF61),
-                    labelStyle: TextStyle(
-                      color: _filterStatus == 'Mevcut'
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ChoiceChip(
-                    label: const Text('Ödünç Verildi'),
-                    selected: _filterStatus == 'Ödünç Verildi',
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _filterStatus = 'Ödünç Verildi';
-                        });
-                      }
-                    },
-                    backgroundColor: Colors.grey[200],
-                    selectedColor: const Color(0xFF04BF61),
-                    labelStyle: TextStyle(
-                      color: _filterStatus == 'Ödünç Verildi'
-                          ? Colors.white
-                          : Colors.black,
-                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    selectedBorderColor: const Color(0xFF04BF61),
+                    selectedColor: Colors.white,
+                    fillColor: const Color(0xFF04BF61),
+                    color: Colors.black,
+                    borderColor: Colors.grey,
+                    children: const [
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('Tümü', textAlign: TextAlign.center),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('Mevcut', textAlign: TextAlign.center),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('Ödünç Verildi',
+                              textAlign: TextAlign.center),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
           Expanded(
             child: FutureBuilder<List<Book>>(
               future: _booksFuture,
