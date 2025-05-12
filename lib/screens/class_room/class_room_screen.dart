@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/class_room.dart';
 import '../../services/database/database_service.dart';
+import '../../screens/student/student_screen.dart';
 
 /// Sınıf işlemleri ekranı
 class ClassRoomScreen extends StatefulWidget {
@@ -201,6 +202,15 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
                           ),
                           title: Text(classRoom.name),
                           subtitle: Text(classRoom.description ?? ''),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    StudentScreen(classRoom: classRoom),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     );

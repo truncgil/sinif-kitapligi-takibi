@@ -7,7 +7,8 @@ import 'student_detail_screen.dart';
 
 /// Öğrenci işlemleri ekranı
 class StudentScreen extends StatefulWidget {
-  const StudentScreen({super.key});
+  final ClassRoom? classRoom;
+  const StudentScreen({super.key, this.classRoom});
 
   @override
   State<StudentScreen> createState() => _StudentScreenState();
@@ -17,14 +18,23 @@ class _StudentScreenState extends State<StudentScreen> {
   late Future<List<Student>> _studentsFuture;
   late DatabaseService _databaseService;
   late Future<List<ClassRoom>> _classRoomsFuture;
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
+    _searchController.text = widget.classRoom?.name ?? '';
+    _searchQuery = widget.classRoom?.name ?? '';
     _refreshStudents();
     _classRoomsFuture = _databaseService.getAllClassRooms();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _refreshStudents() {
@@ -59,6 +69,7 @@ class _StudentScreenState extends State<StudentScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
+              controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Öğrenci Ara...',
                 prefixIcon: const Icon(Icons.search),
