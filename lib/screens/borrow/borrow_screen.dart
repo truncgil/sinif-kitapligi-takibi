@@ -171,14 +171,14 @@ class _BorrowScreenState extends State<BorrowScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    const Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.person,
                           color: Color(0xFF04BF61),
                         ),
-                        const SizedBox(width: 8),
-                        const Text(
+                        SizedBox(width: 8),
+                        Text(
                           'Öğrenci Seç',
                           style: TextStyle(
                             fontSize: 18,
@@ -298,16 +298,16 @@ class _BorrowScreenState extends State<BorrowScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(
+                        const Flexible(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.book,
                                 color: Color(0xFF04BF61),
                               ),
-                              const SizedBox(width: 8),
-                              const Flexible(
+                              SizedBox(width: 8),
+                              Flexible(
                                 child: Text(
                                   'Kitap Seç',
                                   style: TextStyle(
@@ -391,6 +391,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
 
                         return DropdownButtonFormField<Book>(
                           value: selectedBook,
+                          isExpanded: true,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -409,7 +410,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
                               borderRadius: BorderRadius.circular(8),
                               borderSide: const BorderSide(
                                 color: Color(0xFF04BF61),
-                                width: 2.0,
+                                width: 1.0,
                               ),
                             ),
                             hintText: 'Kitap seçin',
@@ -424,7 +425,11 @@ class _BorrowScreenState extends State<BorrowScreen> {
                           items: books.map((book) {
                             return DropdownMenuItem(
                               value: book,
-                              child: Text('${book.title} (${book.author})'),
+                              child: Text(
+                                '${book.title} (${book.author})',
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: false,
+                              ),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -453,15 +458,15 @@ class _BorrowScreenState extends State<BorrowScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.done,
                     size: 24,
                   ),
-                  const SizedBox(width: 8),
-                  const Text(
+                  SizedBox(width: 8),
+                  Text(
                     'Ödünç Ver',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
