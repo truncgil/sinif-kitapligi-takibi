@@ -4,6 +4,7 @@ import '../../models/student.dart';
 import '../../models/borrow_record.dart';
 import '../../models/book.dart';
 import '../../services/database/database_service.dart';
+import '../../constants/colors.dart';
 
 class StudentDetailScreen extends StatefulWidget {
   final Student student;
@@ -39,6 +40,8 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.secondary,
+        centerTitle: true,
         title: Text('${widget.student.name} ${widget.student.surname}'),
       ),
       body: Column(

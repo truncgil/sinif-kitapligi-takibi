@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/class_room.dart';
 import '../../services/database/database_service.dart';
 import '../../screens/student/student_screen.dart';
+import '../../constants/colors.dart';
 
 /// Sınıf işlemleri ekranı
 class ClassRoomScreen extends StatefulWidget {
@@ -76,6 +77,8 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.secondary,
+        centerTitle: true,
         title: const Text('Sınıflar'),
       ),
       body: Column(

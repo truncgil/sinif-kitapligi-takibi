@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   /// Ana tema rengi
   static const Color primary = Color(0xFF04BF61);
+  static const Color secondary = Color.fromARGB(255, 77, 212, 145);
 
   /// Koyu tema için arka plan rengi
   static const Color darkBackground = Color(0xFF121212);

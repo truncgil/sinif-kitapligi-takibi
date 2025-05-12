@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/student.dart';
 import '../../services/database/database_service.dart';
 import '../student/student_detail_screen.dart';
+import '../../constants/colors.dart';
 
 class ClassStudentsScreen extends StatelessWidget {
   final String className;
@@ -14,6 +15,8 @@ class ClassStudentsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.secondary,
+        centerTitle: true,
         title: Text('$className Öğrencileri'),
       ),
       body: FutureBuilder<List<Student>>(

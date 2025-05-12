@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/book.dart';
 import '../../services/database/database_service.dart';
 import '../../services/barcode_scanner/barcode_scanner_service.dart';
+import '../../constants/colors.dart';
 import 'book_detail_screen.dart';
 
 /// Kitap işlemleri ekranı
@@ -167,6 +168,8 @@ class _BookScreenState extends State<BookScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.secondary,
+        centerTitle: true,
         title: const Text('Kitaplar'),
       ),
       body: Column(

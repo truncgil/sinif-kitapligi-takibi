@@ -4,6 +4,7 @@ import '../../models/student.dart';
 import '../../models/class_room.dart';
 import '../../services/database/database_service.dart';
 import 'student_detail_screen.dart';
+import '../../constants/colors.dart';
 
 /// Öğrenci işlemleri ekranı
 class StudentScreen extends StatefulWidget {
@@ -62,6 +63,8 @@ class _StudentScreenState extends State<StudentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.secondary,
+        centerTitle: true,
         title: const Text('Öğrenciler'),
       ),
       body: Column(

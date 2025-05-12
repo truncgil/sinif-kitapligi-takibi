@@ -4,6 +4,7 @@ import '../../models/book.dart';
 import '../../models/student.dart';
 import '../../models/borrow_record.dart';
 import '../../services/database/database_service.dart';
+import '../../constants/colors.dart';
 
 /// Kitap detay ekranı
 class BookDetailScreen extends StatelessWidget {
@@ -15,6 +16,8 @@ class BookDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.secondary,
+        centerTitle: true,
         title: const Text('Kitap Detayları'),
       ),
       body: Column(

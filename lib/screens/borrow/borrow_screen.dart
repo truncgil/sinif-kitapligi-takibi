@@ -6,6 +6,7 @@ import '../../models/borrow_record.dart';
 import '../../services/database/database_service.dart';
 import '../../providers/library_provider.dart';
 import '../barcode_scanner/barcode_scanner_page.dart';
+import '../../constants/colors.dart';
 
 /// Kitap ödünç verme ekranı
 class BorrowScreen extends StatefulWidget {
@@ -168,6 +169,8 @@ class _BorrowScreenState extends State<BorrowScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.secondary,
+        centerTitle: true,
         title: const Text(
           'Kitap Ödünç Ver',
           style: TextStyle(fontWeight: FontWeight.bold),

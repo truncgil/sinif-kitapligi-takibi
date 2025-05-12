@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../services/database/database_service.dart';
 import '../../models/book.dart';
 import '../borrow/borrow_screen.dart';
+import '../../constants/colors.dart';
 
 /// Barkod tarama sayfası
 class BarcodeScannerPage extends StatefulWidget {
@@ -185,6 +186,8 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.secondary,
+        centerTitle: true,
         title: const Row(
           children: [
             Icon(
