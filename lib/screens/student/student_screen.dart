@@ -63,7 +63,7 @@ class _StudentScreenState extends State<StudentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.student,
         centerTitle: true,
         title: const Text(
           'Öğrenciler',

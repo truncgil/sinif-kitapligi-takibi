@@ -36,7 +36,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.history,
         centerTitle: true,
         title: const Text(
           'Geçmiş',

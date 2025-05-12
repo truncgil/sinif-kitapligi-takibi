@@ -813,7 +813,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.borrow,
         centerTitle: true,
         title: Text(
           _getAppBarTitle(),

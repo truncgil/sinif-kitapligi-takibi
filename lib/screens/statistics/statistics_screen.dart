@@ -12,7 +12,7 @@ class StatisticsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.statistics,
         centerTitle: true,
         title: const Text(
           'İstatistikler',

@@ -108,7 +108,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Ödünç Ver',
         'icon': Icons.add_box,
-        'color': theme.colorScheme.primary,
+        'color': AppColors.borrow,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const BorrowScreen()),
@@ -117,7 +117,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Sınıflar',
         'icon': Icons.class_,
-        'color': theme.colorScheme.primary,
+        'color': AppColors.classRoom,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ClassRoomScreen()),
@@ -126,7 +126,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Öğrenciler',
         'icon': Icons.people,
-        'color': theme.colorScheme.primary,
+        'color': AppColors.student,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const StudentScreen()),
@@ -135,7 +135,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Kitaplar',
         'icon': Icons.book,
-        'color': theme.colorScheme.primary,
+        'color': AppColors.book,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const BookScreen()),
@@ -144,7 +144,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Geçmiş',
         'icon': Icons.history,
-        'color': theme.colorScheme.primary,
+        'color': AppColors.history,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const HistoryScreen()),
@@ -153,7 +153,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'İstatistik',
         'icon': Icons.bar_chart,
-        'color': theme.colorScheme.primary,
+        'color': AppColors.statistics,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const StatisticsScreen()),
@@ -162,7 +162,7 @@ class HomeScreen extends StatelessWidget {
       {
         'title': 'Yedekleme',
         'icon': Icons.backup,
-        'color': theme.colorScheme.primary,
+        'color': AppColors.backup,
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const BackupScreen()),

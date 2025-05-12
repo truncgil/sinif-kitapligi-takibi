@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../../services/backup/backup_service.dart';
 import '../../providers/library_provider.dart';
+import '../../constants/colors.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -263,6 +264,7 @@ class _BackupScreenState extends State<BackupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.backup,
         title: const Text('Veri Yedekleme ve Geri Yükleme'),
         actions: [
           IconButton(

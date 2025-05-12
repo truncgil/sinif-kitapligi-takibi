@@ -168,7 +168,7 @@ class _BookScreenState extends State<BookScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.book,
         centerTitle: true,
         title: const Text(
           'Kitaplar',
