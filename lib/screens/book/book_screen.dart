@@ -10,6 +10,104 @@ class BookScreen extends StatefulWidget {
 
   @override
   State<BookScreen> createState() => _BookScreenState();
+
+  /// Dışarıdan kitap ekleme dialogunu barkod ile açmak için static fonksiyon
+  static Future<void> showAddBookDialogWithBarcode(
+      BuildContext context, String barcode) async {
+    // BookScreen'in state'ine erişmek için bir GlobalKey kullanılabilir veya
+    // doğrudan fonksiyonu burada tanımlayabiliriz. Ancak _showAddBookWithBarcode private olduğu için,
+    // fonksiyonu buraya taşıyoruz.
+    final formKey = GlobalKey<FormState>();
+    String title = '';
+    String author = '';
+    String isbn = '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Yeni Kitap Ekle'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Kitap Adı'),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Kitap adı boş olamaz' : null,
+                onSaved: (value) => title = value ?? '',
+                autofocus: true,
+              ),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Yazar'),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Yazar boş olamaz' : null,
+                onSaved: (value) => author = value ?? '',
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'Barkod: $barcode',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                formKey.currentState?.save();
+                try {
+                  final dbService =
+                      Provider.of<DatabaseService>(context, listen: false);
+                  final book = Book(
+                    title: title,
+                    author: author,
+                    isbn: isbn,
+                    barcode: barcode,
+                  );
+                  await dbService.insertBook(book);
+                  // Kitaplar ekranı açıksa yenileme yapılabilir
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('$title başarıyla eklendi'),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      margin: const EdgeInsets.all(8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  );
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Kitap eklenirken bir hata oluştu: $e'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      margin: const EdgeInsets.all(8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _BookScreenState extends State<BookScreen> {
