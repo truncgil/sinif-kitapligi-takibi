@@ -115,6 +115,7 @@ class _BookScreenState extends State<BookScreen> {
   late DatabaseService _databaseService;
   final _barcodeScannerService = BarcodeScannerService();
   String _searchQuery = '';
+  String _filterStatus = 'Tümü'; // 'Tümü', 'Mevcut', 'Ödünç Verildi'
 
   @override
   void initState() {
@@ -130,18 +131,35 @@ class _BookScreenState extends State<BookScreen> {
   }
 
   List<Book> _filterBooks(List<Book> books) {
-    if (_searchQuery.isEmpty) return books;
-    return books.where((book) {
-      final title = book.title.toLowerCase();
-      final author = book.author.toLowerCase();
-      final isbn = book.isbn.toLowerCase();
-      final barcode = book.barcode.toLowerCase();
-      final query = _searchQuery.toLowerCase();
-      return title.contains(query) ||
-          author.contains(query) ||
-          isbn.contains(query) ||
-          barcode.contains(query);
-    }).toList();
+    var filteredBooks = books;
+
+    // Önce durum filtresini uygula
+    if (_filterStatus != 'Tümü') {
+      filteredBooks = filteredBooks.where((book) {
+        if (_filterStatus == 'Mevcut') {
+          return book.isAvailable;
+        } else {
+          return !book.isAvailable;
+        }
+      }).toList();
+    }
+
+    // Sonra arama filtresini uygula
+    if (_searchQuery.isNotEmpty) {
+      filteredBooks = filteredBooks.where((book) {
+        final title = book.title.toLowerCase();
+        final author = book.author.toLowerCase();
+        final isbn = book.isbn.toLowerCase();
+        final barcode = book.barcode.toLowerCase();
+        final query = _searchQuery.toLowerCase();
+        return title.contains(query) ||
+            author.contains(query) ||
+            isbn.contains(query) ||
+            barcode.contains(query);
+      }).toList();
+    }
+
+    return filteredBooks;
   }
 
   @override
@@ -170,6 +188,75 @@ class _BookScreenState extends State<BookScreen> {
               },
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('Tümü'),
+                    selected: _filterStatus == 'Tümü',
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _filterStatus = 'Tümü';
+                        });
+                      }
+                    },
+                    backgroundColor: Colors.grey[200],
+                    selectedColor: const Color(0xFF04BF61),
+                    labelStyle: TextStyle(
+                      color:
+                          _filterStatus == 'Tümü' ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('Mevcut'),
+                    selected: _filterStatus == 'Mevcut',
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _filterStatus = 'Mevcut';
+                        });
+                      }
+                    },
+                    backgroundColor: Colors.grey[200],
+                    selectedColor: const Color(0xFF04BF61),
+                    labelStyle: TextStyle(
+                      color: _filterStatus == 'Mevcut'
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('Ödünç Verildi'),
+                    selected: _filterStatus == 'Ödünç Verildi',
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _filterStatus = 'Ödünç Verildi';
+                        });
+                      }
+                    },
+                    backgroundColor: Colors.grey[200],
+                    selectedColor: const Color(0xFF04BF61),
+                    labelStyle: TextStyle(
+                      color: _filterStatus == 'Ödünç Verildi'
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           Expanded(
             child: FutureBuilder<List<Book>>(
               future: _booksFuture,
