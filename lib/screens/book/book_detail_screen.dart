@@ -5,12 +5,29 @@ import '../../models/student.dart';
 import '../../models/borrow_record.dart';
 import '../../services/database/database_service.dart';
 import '../../constants/colors.dart';
+import '../student/student_screen.dart';
+import '../borrow/borrow_screen.dart';
 
 /// Kitap detay ekranı
-class BookDetailScreen extends StatelessWidget {
+class BookDetailScreen extends StatefulWidget {
   final Book book;
 
   const BookDetailScreen({Key? key, required this.book}) : super(key: key);
+
+  @override
+  State<BookDetailScreen> createState() => _BookDetailScreenState();
+}
+
+class _BookDetailScreenState extends State<BookDetailScreen> {
+  late DatabaseService _databaseService;
+  late Book _book;
+
+  @override
+  void initState() {
+    super.initState();
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
+    _book = widget.book;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +42,7 @@ class BookDetailScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          _BookHeader(book: book),
+          _BookHeader(book: _book),
           const SizedBox(height: 8),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
@@ -50,7 +67,7 @@ class BookDetailScreen extends StatelessWidget {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('Hata: {snapshot.error}'));
+                  return Center(child: Text('Hata: {snapshot.error}'));
                 }
 
                 final borrowHistory = snapshot.data ?? [];
@@ -102,6 +119,18 @@ class BookDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _book.isAvailable ? _borrowBook : _returnBook,
+        backgroundColor: _book.isAvailable ? AppColors.primary : Colors.orange,
+        label: Text(
+          _book.isAvailable ? 'Ödünç Ver' : 'İade Et',
+          style: const TextStyle(color: Colors.white),
+        ),
+        icon: Icon(
+          _book.isAvailable ? Icons.bookmark_add : Icons.bookmark_remove,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 
@@ -109,7 +138,7 @@ class BookDetailScreen extends StatelessWidget {
   Future<List<Map<String, dynamic>>> _getBorrowHistory(
       BuildContext context) async {
     final dbService = Provider.of<DatabaseService>(context, listen: false);
-    final records = await dbService.getBorrowRecordsByBook(book.id!);
+    final records = await dbService.getBorrowRecordsByBook(_book.id!);
 
     List<Map<String, dynamic>> history = [];
     for (var record in records) {
@@ -128,6 +157,128 @@ class BookDetailScreen extends StatelessWidget {
   /// Tarihi Türkçe formatta döndürür
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+  }
+
+  /// Kitap ödünç verme işlemi
+  Future<void> _borrowBook() async {
+    // Öğrenci seçim ekranına değil, doğrudan BorrowScreen'e yönlendir
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BorrowScreen(initialBarcode: _book.barcode),
+      ),
+    ).then((_) {
+      // Ekrana geri dönüldüğünde kitap durumunu güncellemek için kitabı tekrar yükle
+      _refreshBookStatus();
+    });
+  }
+
+  /// Kitap durumunu veritabanından tekrar yükler
+  Future<void> _refreshBookStatus() async {
+    try {
+      final updatedBook = await _databaseService.getBookById(_book.id!);
+      if (updatedBook != null && mounted) {
+        setState(() {
+          _book = updatedBook;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Kitap durumu güncellenirken hata oluştu: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Kitap iade işlemi
+  Future<void> _returnBook() async {
+    try {
+      // Aktif ödünç kaydını bul
+      final borrowRecord =
+          await _databaseService.getActiveBorrowRecordByBookId(_book.id!);
+
+      if (borrowRecord == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kitap ödünç kaydı bulunamadı'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Öğrenci bilgilerini getir
+      final student =
+          await _databaseService.getStudentById(borrowRecord.studentId);
+      final studentName = student != null
+          ? '${student.name} ${student.surname}'
+          : 'Bilinmeyen öğrenci';
+
+      // Onay diyaloğu göster
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Kitap İadesi'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Kitap: ${_book.title}'),
+                const SizedBox(height: 8),
+                Text('Bu kitap $studentName tarafından ödünç alınmış.'),
+                const SizedBox(height: 16),
+                const Text('Kitabı iade etmek istiyor musunuz?'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('İptal'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.green,
+                ),
+                child: const Text('İade Et'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirm != true) return;
+
+      // İade işlemini gerçekleştir
+      await _databaseService.updateBorrowRecordAsReturned(borrowRecord.id!);
+      await _databaseService.updateBookAvailability(_book.id!, true);
+
+      // Book nesnesini güncelle
+      setState(() {
+        _book = _book.copyWith(isAvailable: true);
+      });
+
+      // Bildirim göster
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kitap başarıyla iade edildi'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('İşlem sırasında bir hata oluştu: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 

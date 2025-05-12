@@ -40,6 +40,25 @@ class Book {
     );
   }
 
+  /// Belirli özelliklerini değiştirerek yeni bir Book nesnesi oluşturur
+  Book copyWith({
+    int? id,
+    String? title,
+    String? author,
+    String? isbn,
+    String? barcode,
+    bool? isAvailable,
+  }) {
+    return Book(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      author: author ?? this.author,
+      isbn: isbn ?? this.isbn,
+      barcode: barcode ?? this.barcode,
+      isAvailable: isAvailable ?? this.isAvailable,
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
