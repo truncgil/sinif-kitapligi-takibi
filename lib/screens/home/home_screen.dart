@@ -40,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 24),
                 Center(
                   child: Image.asset(
-                    'assets/icons/edubook.png',
+                    'assets/icons/librolog.png',
                     width: MediaQuery.of(context).size.width > 600
                         ? 280
                         : MediaQuery.of(context).size.width * 0.6,

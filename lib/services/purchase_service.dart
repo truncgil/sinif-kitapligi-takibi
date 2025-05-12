@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,8 +9,44 @@ class PurchaseService {
 
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   final SharedPreferences _prefs;
+  StreamSubscription<List<PurchaseDetails>>? _subscription;
 
-  PurchaseService(this._prefs);
+  PurchaseService(this._prefs) {
+    _initializePurchaseListener();
+  }
+
+  void _initializePurchaseListener() {
+    _subscription = _inAppPurchase.purchaseStream.listen(
+      (purchaseDetailsList) {
+        _listenToPurchaseUpdated(purchaseDetailsList);
+      },
+      onDone: () {
+        _subscription?.cancel();
+      },
+      onError: (error) {
+        print('Satın alma dinleyici hatası: $error');
+      },
+    );
+  }
+
+  Future<void> _listenToPurchaseUpdated(
+      List<PurchaseDetails> purchaseDetailsList) async {
+    for (final purchaseDetails in purchaseDetailsList) {
+      if (purchaseDetails.status == PurchaseStatus.pending) {
+        // Satın alma işlemi devam ediyor
+      } else if (purchaseDetails.status == PurchaseStatus.error) {
+        // Hata durumu
+        print('Satın alma hatası: ${purchaseDetails.error}');
+      } else if (purchaseDetails.status == PurchaseStatus.purchased ||
+          purchaseDetails.status == PurchaseStatus.restored) {
+        // Başarılı satın alma veya geri yükleme
+        await _savePurchaseStatus(true);
+      }
+      if (purchaseDetails.pendingCompletePurchase) {
+        await _inAppPurchase.completePurchase(purchaseDetails);
+      }
+    }
+  }
 
   Future<bool> isUnlimitedBooksPurchased() async {
     return _prefs.getBool(_unlimitedBooksKey) ?? false;
@@ -53,5 +90,10 @@ class PurchaseService {
       print('Satın alma hatası: $e');
       return false;
     }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
   }
 }

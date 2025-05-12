@@ -46,5 +46,9 @@
 			<key>SKStoreKitConfiguration</key>
 			<string>StoreKit</string>
 		</dict>
+		<key>UIStatusBarHidden</key>
+		<false/>
+		<key>UIViewControllerBasedStatusBarAppearance</key>
+		<false/>
 	</dict>
 </plist>

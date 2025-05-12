@@ -59,7 +59,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Edubook',
+      title: 'LibroLog',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.green,
@@ -154,7 +154,7 @@ class _AppStartWidgetState extends State<AppStartWidget>
         child: ScaleTransition(
           scale: _animation,
           child: Image.asset(
-            'assets/icons/edubook.png',
+            'assets/icons/librolog.png',
             width: 250,
           ),
         ),

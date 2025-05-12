@@ -40,9 +40,8 @@ dependencies:
   path: ^1.8.3
   provider: ^6.0.5
   intl: ^0.18.1
-  flutter_launcher_icons: ^0.14.3
+  flutter_launcher_icons: ^0.13.1
   mobile_scanner: ^7.0.0
-  flutter_native_splash: ^2.4.6
   path_provider: ^2.1.1
   permission_handler: ^12.0.0+1
   in_app_purchase: ^3.1.13
@@ -73,7 +72,8 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/icons/
+    - assets/icons/librolog.png
+    - assets/icons/icon.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -102,7 +102,7 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-flutter_launcher_icons:
+flutter_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/icons/icon.png"
@@ -111,8 +111,8 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/icons/icon.png"
-    background_color: "#04BF61"
-    theme_color: "#04BF61"
+    background_color: "#A8FAD2"
+    theme_color: "#A8FAD2"
   windows:
     generate: true
     image_path: "assets/icons/icon.png"
@@ -120,26 +120,3 @@ flutter_launcher_icons:
   macos:
     generate: true
     image_path: "assets/icons/icon.png"
-
-flutter_native_splash:
-  color: "#04BF61"
-  #background_image: "assets/background.png"
-  image: "assets/icons/edubook-sub.png"
-  color_dark: "#121212"
-  #background_image_dark: "assets/dark-background.png"
-  image_dark: "assets/icons/edubook-sub.png"
-
-  android_12:
-    image: "assets/icons/edubook-sub.png"
-    icon_background_color: "#04BF61"
-    image_dark: "assets/icons/edubook-sub.png"
-    icon_background_color_dark: "#121212"
-
-  web: false
-  ios: true
-  android: true
-  android_gravity: center
-  ios_content_mode: center
-  fullscreen: true
-
-  android_screen_orientation: portrait

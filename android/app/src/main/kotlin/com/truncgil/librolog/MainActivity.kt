@@ -1,4 +1,4 @@
-package com.truncgil.kitaptakibi
+package com.truncgil.librolog
 
 import io.flutter.embedding.android.FlutterActivity
 
