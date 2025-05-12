@@ -201,7 +201,31 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
                             child: Icon(Icons.class_),
                           ),
                           title: Text(classRoom.name),
-                          subtitle: Text(classRoom.description ?? ''),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(classRoom.description ?? ''),
+                              FutureBuilder<int>(
+                                future: _databaseService
+                                    .getStudentCountByClassRoom(classRoom.name),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return const Text('Yükleniyor...');
+                                  }
+                                  final count = snapshot.data ?? 0;
+                                  return Text(
+                                    '$count Öğrenci',
+                                    style: TextStyle(
+                                      color:
+                                          count > 0 ? Colors.blue : Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                           onTap: () {
                             Navigator.push(
                               context,

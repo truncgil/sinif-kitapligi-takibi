@@ -641,4 +641,14 @@ class DatabaseService {
     ''', [studentId]);
     return Sqflite.firstIntValue(result) ?? 0;
   }
+
+  Future<int> getStudentCountByClassRoom(String className) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM students 
+      WHERE className = ?
+    ''', [className]);
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
 }
