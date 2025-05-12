@@ -5,6 +5,7 @@ import '../history/history_screen.dart';
 import '../class_room/class_room_screen.dart';
 import '../statistics/statistics_screen.dart';
 import '../borrow/borrow_screen.dart';
+import '../backup/backup_screen.dart';
 import '../../models/book.dart';
 import '../../services/database/database_service.dart';
 import 'package:provider/provider.dart';
@@ -156,6 +157,15 @@ class HomeScreen extends StatelessWidget {
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const StatisticsScreen()),
+            ),
+      },
+      {
+        'title': 'Yedekleme',
+        'icon': Icons.backup,
+        'color': theme.colorScheme.primary,
+        'onTap': () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const BackupScreen()),
             ),
       },
     ];
