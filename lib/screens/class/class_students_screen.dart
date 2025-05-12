@@ -17,7 +17,10 @@ class ClassStudentsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        title: Text('$className Öğrencileri'),
+        title: Text(
+          '$className Öğrencileri',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: FutureBuilder<List<Student>>(
         future: _getStudentsByClass(context),

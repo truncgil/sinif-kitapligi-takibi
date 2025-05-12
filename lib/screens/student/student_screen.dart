@@ -65,7 +65,10 @@ class _StudentScreenState extends State<StudentScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        title: const Text('Öğrenciler'),
+        title: const Text(
+          'Öğrenciler',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [

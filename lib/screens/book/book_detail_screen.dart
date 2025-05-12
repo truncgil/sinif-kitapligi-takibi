@@ -18,7 +18,10 @@ class BookDetailScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        title: const Text('Kitap Detayları'),
+        title: const Text(
+          'Kitap Detayları',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [

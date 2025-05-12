@@ -38,7 +38,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        title: const Text('Geçmiş'),
+        title: const Text(
+          'Geçmiş',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: FutureBuilder<List<BorrowRecord>>(
         future: _recordsFuture,

@@ -14,7 +14,10 @@ class StatisticsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        title: const Text('İstatistikler'),
+        title: const Text(
+          'İstatistikler',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _getStatistics(dbService),

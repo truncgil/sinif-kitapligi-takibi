@@ -79,7 +79,10 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        title: const Text('Sınıflar'),
+        title: const Text(
+          'Sınıflar',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [

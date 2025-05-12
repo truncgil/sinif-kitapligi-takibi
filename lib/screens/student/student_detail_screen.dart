@@ -42,7 +42,10 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        title: Text('${widget.student.name} ${widget.student.surname}'),
+        title: Text(
+          '${widget.student.name} ${widget.student.surname}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [

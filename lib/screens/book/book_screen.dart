@@ -170,7 +170,10 @@ class _BookScreenState extends State<BookScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        title: const Text('Kitaplar'),
+        title: const Text(
+          'Kitaplar',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [
