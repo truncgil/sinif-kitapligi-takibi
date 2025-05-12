@@ -60,26 +60,109 @@ class _StudentScreenState extends State<StudentScreen> {
             itemCount: students.length,
             itemBuilder: (context, index) {
               final student = students[index];
-              return ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.person),
+              return Dismissible(
+                key: Key(student.id.toString()),
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 16),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                  ),
                 ),
-                title: Text('${student.name} ${student.surname}'),
-                subtitle: Text('Sınıf: ${student.className}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(student.studentNumber),
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _showEditStudentDialog(context, student),
+                secondaryBackground: Container(
+                  color: Colors.blue,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(left: 16),
+                  child: const Icon(
+                    Icons.edit,
+                    color: Colors.white,
+                  ),
+                ),
+                confirmDismiss: (direction) async {
+                  if (direction == DismissDirection.endToStart) {
+                    // Düzenleme işlemi
+                    _showEditStudentDialog(context, student);
+                    return false;
+                  } else {
+                    // Silme işlemi
+                    return await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Öğrenci Silme'),
+                          content: Text(
+                              '${student.name} ${student.surname} öğrencisini silmek istediğinize emin misiniz?'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('İptal'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text(
+                                'Sil',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }
+                },
+                onDismissed: (direction) async {
+                  if (direction == DismissDirection.startToEnd) {
+                    try {
+                      await _databaseService.deleteStudent(student.id!);
+                      _refreshStudents();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              '${student.name} ${student.surname} başarıyla silindi'),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.all(8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content:
+                              Text('Öğrenci silinirken bir hata oluştu: $e'),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.all(8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: Card(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.person),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () =>
-                          _showDeleteStudentDialog(context, student),
+                    title: Text('${student.name} ${student.surname}'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Sınıf: ${student.className}'),
+                        Text('Öğrenci No: ${student.studentNumber}'),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               );
             },
@@ -352,51 +435,6 @@ class _StudentScreenState extends State<StudentScreen> {
               }
             },
             child: const Text('Güncelle'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showDeleteStudentDialog(
-      BuildContext context, Student student) async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Öğrenci Silme'),
-        content: Text(
-            '${student.name} ${student.surname} öğrencisini silmek istediğinize emin misiniz?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await _databaseService.deleteStudent(student.id!);
-                _refreshStudents();
-
-                if (!mounted) return;
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Öğrenci başarıyla silindi.'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Öğrenci silinirken bir hata oluştu: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Sil'),
           ),
         ],
       ),

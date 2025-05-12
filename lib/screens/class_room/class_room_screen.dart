@@ -87,28 +87,81 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
             itemCount: classRooms.length,
             itemBuilder: (context, index) {
               final classRoom = classRooms[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.class_),
+              return Dismissible(
+                key: Key(classRoom.id.toString()),
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 16),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
                   ),
-                  title: Text(classRoom.name),
-                  subtitle: Text(classRoom.description ?? ''),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () =>
-                            _showEditClassRoomDialog(context, classRoom),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () =>
-                            _showDeleteClassRoomDialog(context, classRoom),
-                      ),
-                    ],
+                ),
+                secondaryBackground: Container(
+                  color: Colors.blue,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(left: 16),
+                  child: const Icon(
+                    Icons.edit,
+                    color: Colors.white,
+                  ),
+                ),
+                confirmDismiss: (direction) async {
+                  if (direction == DismissDirection.endToStart) {
+                    // Düzenleme işlemi
+                    _showEditClassRoomDialog(context, classRoom);
+                    return false;
+                  } else {
+                    // Silme işlemi
+                    return await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Sınıf Silme'),
+                          content: Text(
+                              '${classRoom.name} sınıfını silmek istediğinize emin misiniz?'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('İptal'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text(
+                                'Sil',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }
+                },
+                onDismissed: (direction) async {
+                  if (direction == DismissDirection.startToEnd) {
+                    try {
+                      await _databaseService.deleteClassRoom(classRoom.id!);
+                      _refreshClassRooms();
+                      if (!mounted) return;
+                      _showSuccessMessage(
+                          '${classRoom.name} sınıfı başarıyla silindi.');
+                    } catch (e) {
+                      if (!mounted) return;
+                      _showErrorMessage('Sınıf silinirken bir hata oluştu: $e');
+                    }
+                  }
+                },
+                child: Card(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.class_),
+                    ),
+                    title: Text(classRoom.name),
+                    subtitle: Text(classRoom.description ?? ''),
                   ),
                 ),
               );
@@ -176,40 +229,6 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
               }
             },
             child: const Text('Kaydet'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showDeleteClassRoomDialog(
-      BuildContext context, ClassRoom classRoom) async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sınıf Silme'),
-        content: Text(
-            '${classRoom.name} sınıfını silmek istediğinize emin misiniz?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await _databaseService.deleteClassRoom(classRoom.id!);
-                _refreshClassRooms();
-
-                if (!mounted) return;
-                Navigator.pop(context);
-                _showSuccessMessage('Sınıf başarıyla silindi.');
-              } catch (e) {
-                _showErrorMessage('Sınıf silinirken bir hata oluştu: $e');
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Sil'),
           ),
         ],
       ),
