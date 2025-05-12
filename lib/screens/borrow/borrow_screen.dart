@@ -10,13 +10,22 @@ import '../../constants/colors.dart';
 
 /// Kitap ödünç verme ekranı - Wizard tarzı arayüz
 class BorrowScreen extends StatefulWidget {
+  // Wizard adımları - static erişim için
+  static const int BOOK_SELECTION = 0;
+  static const int STUDENT_SELECTION = 1;
+  static const int CONFIRMATION = 2;
+
   final String? initialBarcode;
   final String? initialStudentNumber;
+  final int? initialStudentId;
+  final int? initialStep;
 
   const BorrowScreen({
     super.key,
     this.initialBarcode,
     this.initialStudentNumber,
+    this.initialStudentId,
+    this.initialStep,
   });
 
   @override
@@ -29,7 +38,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
   static const int STUDENT_SELECTION = 1;
   static const int CONFIRMATION = 2;
 
-  int _currentStep = BOOK_SELECTION;
+  late int _currentStep;
 
   Student? selectedStudent;
   Book? selectedBook;
@@ -38,22 +47,36 @@ class _BorrowScreenState extends State<BorrowScreen> {
   late Future<List<Book>> _availableBooksFuture;
   bool _isProcessing = false;
 
+  // Arama filtreleri için
+  String _studentSearchQuery = '';
+  String _bookSearchQuery = '';
+
+  // Filtrelenmiş listeleri tutan değişkenler
+  List<Student> _filteredStudents = [];
+  List<Book> _filteredBooks = [];
+
   @override
   void initState() {
     super.initState();
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _refreshData();
 
+    // Varsayılan adımı ayarla
+    _currentStep = widget.initialStep ?? BOOK_SELECTION;
+
     // Eğer başlangıç barkodu varsa, o kitabı seç
     if (widget.initialBarcode != null && widget.initialBarcode!.isNotEmpty) {
       _loadBookByBarcode(widget.initialBarcode!);
     }
 
-    // Eğer başlangıç öğrenci numarası varsa, o öğrenciyi seç ve ikinci adıma geç
-    if (widget.initialStudentNumber != null &&
+    // Eğer başlangıç öğrenci ID'si varsa, o öğrenciyi doğrudan seç
+    if (widget.initialStudentId != null) {
+      _loadStudentById(widget.initialStudentId!);
+    }
+    // Eğer ID yoksa ama öğrenci numarası varsa, numaraya göre yükle
+    else if (widget.initialStudentNumber != null &&
         widget.initialStudentNumber!.isNotEmpty) {
       _loadStudentByNumber(widget.initialStudentNumber!);
-      _currentStep = STUDENT_SELECTION;
     }
   }
 
@@ -66,7 +89,14 @@ class _BorrowScreenState extends State<BorrowScreen> {
             !availableBooks.any((b) => b.id == selectedBook!.id)) {
           availableBooks.add(selectedBook!);
         }
+        // Filtrelenmiş kitap listesini başlat
+        _filteredBooks = availableBooks;
         return availableBooks;
+      });
+
+      // Filtrelenmiş öğrenci listesini başlat
+      _studentsFuture.then((students) {
+        _filteredStudents = students;
       });
     });
   }
@@ -126,8 +156,10 @@ class _BorrowScreenState extends State<BorrowScreen> {
             _currentStep = CONFIRMATION;
           });
         } else if (_currentStep == BOOK_SELECTION) {
-          // Sonraki adıma geç
-          _nextStep();
+          // Kitap seçimi yapıldıktan sonra öğrenci seçimine geç
+          setState(() {
+            _currentStep = STUDENT_SELECTION;
+          });
         }
       } else {
         if (!mounted) return;
@@ -169,7 +201,39 @@ class _BorrowScreenState extends State<BorrowScreen> {
         selectedStudent = student;
       });
 
+      // Öğrenci detay ekranından gelen yönlendirmede, kitap seçimine geç
+      if (_currentStep == STUDENT_SELECTION &&
+          widget.initialStep == BOOK_SELECTION) {
+        setState(() {
+          _currentStep = BOOK_SELECTION;
+        });
+      }
       // Eğer kitap da seçilmişse, doğrudan onay adımına geç
+      else if (selectedBook != null) {
+        setState(() {
+          _currentStep = CONFIRMATION;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorMessage('Öğrenci yüklenirken hata oluştu: $e');
+    }
+  }
+
+  // Öğrenciyi ID'ye göre yükle
+  Future<void> _loadStudentById(int studentId) async {
+    try {
+      final students = await _databaseService.getAllStudents();
+      final student = students.firstWhere(
+        (s) => s.id == studentId,
+        orElse: () => throw Exception('Öğrenci bulunamadı (ID: $studentId)'),
+      );
+
+      setState(() {
+        selectedStudent = student;
+      });
+
+      // Eğer kitap da seçiliyse, doğrudan onay adımına geç
       if (selectedBook != null) {
         setState(() {
           _currentStep = CONFIRMATION;
@@ -309,13 +373,24 @@ class _BorrowScreenState extends State<BorrowScreen> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Kitap ara...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: _filterBooks,
+              ),
+            ),
             const Divider(),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: books.length,
+                itemCount: _filteredBooks.length,
                 itemBuilder: (context, index) {
-                  final book = books[index];
+                  final book = _filteredBooks[index];
                   final bool isSelected = selectedBook?.id == book.id;
 
                   return Card(
@@ -459,17 +534,15 @@ class _BorrowScreenState extends State<BorrowScreen> {
                   prefixIcon: Icon(Icons.search),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (value) {
-                  // Arama fonksiyonu buraya eklenebilir
-                },
+                onChanged: _filterStudents,
               ),
             ),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: students.length,
+                itemCount: _filteredStudents.length,
                 itemBuilder: (context, index) {
-                  final student = students[index];
+                  final student = _filteredStudents[index];
                   final bool isSelected = selectedStudent?.id == student.id;
 
                   return Card(
@@ -879,5 +952,57 @@ class _BorrowScreenState extends State<BorrowScreen> {
       height: 2,
       color: isActive ? const Color(0xFF04BF61) : Colors.grey.shade300,
     );
+  }
+
+  // Öğrenci araması için filtre fonksiyonu
+  void _filterStudents(String query) {
+    setState(() {
+      _studentSearchQuery = query;
+    });
+
+    _studentsFuture.then((students) {
+      setState(() {
+        if (query.isEmpty) {
+          _filteredStudents = students;
+        } else {
+          _filteredStudents = students.where((student) {
+            final fullName = '${student.name} ${student.surname}'.toLowerCase();
+            final studentNumber = student.studentNumber.toLowerCase();
+            final className = student.className.toLowerCase();
+            final searchLower = query.toLowerCase();
+
+            return fullName.contains(searchLower) ||
+                studentNumber.contains(searchLower) ||
+                className.contains(searchLower);
+          }).toList();
+        }
+      });
+    });
+  }
+
+  // Kitap araması için filtre fonksiyonu
+  void _filterBooks(String query) {
+    setState(() {
+      _bookSearchQuery = query;
+    });
+
+    _availableBooksFuture.then((books) {
+      setState(() {
+        if (query.isEmpty) {
+          _filteredBooks = books;
+        } else {
+          _filteredBooks = books.where((book) {
+            final title = book.title.toLowerCase();
+            final author = book.author.toLowerCase();
+            final barcode = book.barcode.toLowerCase();
+            final searchLower = query.toLowerCase();
+
+            return title.contains(searchLower) ||
+                author.contains(searchLower) ||
+                barcode.contains(searchLower);
+          }).toList();
+        }
+      });
+    });
   }
 }

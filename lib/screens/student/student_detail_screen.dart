@@ -58,62 +58,24 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
             return;
           }
 
-          // Onay diyaloğu göster
+          // Ödünç verme ekranına git, kitap ve öğrenci seçili olarak
           if (!mounted) return;
-          final bool? confirm = await showDialog<bool>(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('Kitap Ödünç Ver'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Kitap: ${book.title}'),
-                    Text('Yazar: ${book.author}'),
-                    const SizedBox(height: 16),
-                    Text(
-                        'Öğrenci: ${widget.student.name} ${widget.student.surname}'),
-                    Text('Sınıf: ${widget.student.className}'),
-                    const SizedBox(height: 16),
-                    const Text('Bu kitabı ödünç vermek istiyor musunuz?'),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('İptal'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Ödünç Ver'),
-                  ),
-                ],
-              );
-            },
-          );
 
-          if (confirm == true) {
-            // Ödünç verme işlemini gerçekleştir
-            final borrowRecord = BorrowRecord(
-              studentId: widget.student.id!,
-              bookId: book.id!,
-              borrowDate: DateTime.now(),
-            );
+          // Öğrenci bilgisini aktarıyoruz
+          final student = widget.student;
 
-            await _databaseService.insertBorrowRecord(borrowRecord);
-            await _databaseService.updateBookAvailability(book.id!, false);
-            _loadBorrowRecords();
-
-            // Provider'ı güncelle
-            if (!mounted) return;
-            final provider =
-                Provider.of<LibraryProvider>(context, listen: false);
-            await provider.refreshBorrowedBooks();
-
-            if (!mounted) return;
-            _showSuccessMessage('Kitap başarıyla ödünç verildi');
-          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BorrowScreen(
+                initialBarcode: barcode,
+                initialStudentNumber: student.studentNumber,
+                // Öğrenciyi kimliğiyle birlikte geçiriyoruz
+                initialStudentId: student.id,
+                initialStep: BorrowScreen.CONFIRMATION,
+              ),
+            ),
+          ).then((_) => _loadBorrowRecords());
         } else {
           if (!mounted) return;
           _showErrorMessage('Kitap bulunamadı');
@@ -132,6 +94,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
       MaterialPageRoute(
         builder: (_) => BorrowScreen(
           initialStudentNumber: widget.student.studentNumber,
+          initialStep: BorrowScreen.BOOK_SELECTION,
         ),
       ),
     ).then((_) => _loadBorrowRecords());
