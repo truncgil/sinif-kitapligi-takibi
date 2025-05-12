@@ -514,14 +514,14 @@ class DatabaseService {
         'className': '2-B'
       },
       {
-        'name': 'Ali',
-        'surname': 'Öztürk',
+        'name': 'Muhammed Reva',
+        'surname': 'Tunç',
         'studentNumber': '3001',
         'className': '3-C'
       },
       {
-        'name': 'Fatma',
-        'surname': 'Şahin',
+        'name': 'Damlanur Sevgi',
+        'surname': 'Tunç',
         'studentNumber': '4001',
         'className': '4-A'
       },
@@ -533,6 +533,13 @@ class DatabaseService {
 
     // Kitapları ekle
     List<Map<String, dynamic>> books = [
+      {
+        'title': 'Adobe Premiere Pro ile Montaj Teknikleri',
+        'author': 'Ümit Tunç',
+        'isbn': '9789750719451',
+        'barcode': 'KP002432',
+        'isAvailable': 1
+      },
       {
         'title': 'Küçük Prens',
         'author': 'Antoine de Saint-Exupéry',

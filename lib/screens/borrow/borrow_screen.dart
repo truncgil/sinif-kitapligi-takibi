@@ -350,11 +350,14 @@ class _BorrowScreenState extends State<BorrowScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Kitap Seçimi',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  const Flexible(
+                    child: Text(
+                      'Kitap Seçimi',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   ElevatedButton.icon(
@@ -430,7 +433,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
                                     : Colors.grey,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,6 +447,8 @@ class _BorrowScreenState extends State<BorrowScreen> {
                                           ? const Color(0xFF04BF61)
                                           : Colors.black,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     book.author,
@@ -452,6 +457,8 @@ class _BorrowScreenState extends State<BorrowScreen> {
                                           ? const Color(0xFF04BF61)
                                           : Colors.grey.shade700,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   if (book.barcode.isNotEmpty)
                                     Text(
@@ -462,6 +469,8 @@ class _BorrowScreenState extends State<BorrowScreen> {
                                             ? const Color(0xFF04BF61)
                                             : Colors.grey,
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                 ],
                               ),
@@ -523,6 +532,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const Divider(),
@@ -582,7 +592,7 @@ class _BorrowScreenState extends State<BorrowScreen> {
                                     : Colors.grey,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,6 +606,8 @@ class _BorrowScreenState extends State<BorrowScreen> {
                                           ? const Color(0xFF04BF61)
                                           : Colors.black,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     'Sınıf: ${student.className}',
@@ -604,6 +616,8 @@ class _BorrowScreenState extends State<BorrowScreen> {
                                           ? const Color(0xFF04BF61)
                                           : Colors.grey.shade700,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     'Numara: ${student.studentNumber}',
@@ -613,6 +627,8 @@ class _BorrowScreenState extends State<BorrowScreen> {
                                           ? const Color(0xFF04BF61)
                                           : Colors.grey,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
@@ -646,109 +662,114 @@ class _BorrowScreenState extends State<BorrowScreen> {
 
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Ödünç Verme İşlemini Onayla',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Kitap Bilgileri',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF04BF61),
-                    ),
-                  ),
-                  const Divider(),
-                  _buildInfoRow('Kitap Adı', selectedBook!.title),
-                  _buildInfoRow('Yazar', selectedBook!.author),
-                  if (selectedBook!.barcode.isNotEmpty)
-                    _buildInfoRow('Barkod', selectedBook!.barcode),
-                ],
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Ödünç Verme İşlemini Onayla',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Öğrenci Bilgileri',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF04BF61),
-                    ),
-                  ),
-                  const Divider(),
-                  _buildInfoRow('Ad Soyad',
-                      '${selectedStudent!.name} ${selectedStudent!.surname}'),
-                  _buildInfoRow('Sınıf', selectedStudent!.className),
-                  _buildInfoRow('Öğrenci No', selectedStudent!.studentNumber),
-                ],
+            const SizedBox(height: 24),
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'İşlem Bilgileri',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF04BF61),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Kitap Bilgileri',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF04BF61),
+                      ),
                     ),
-                  ),
-                  const Divider(),
-                  _buildInfoRow('İşlem', 'Kitap Ödünç Verme'),
-                  _buildInfoRow('Tarih', _formatDate(DateTime.now())),
-                ],
-              ),
-            ),
-          ),
-          const Spacer(),
-          if (_isProcessing)
-            const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Color(0xFF04BF61),
+                    const Divider(),
+                    _buildInfoRow('Kitap Adı', selectedBook!.title),
+                    _buildInfoRow('Yazar', selectedBook!.author),
+                    if (selectedBook!.barcode.isNotEmpty)
+                      _buildInfoRow('Barkod', selectedBook!.barcode),
+                  ],
                 ),
               ),
             ),
-        ],
+            const SizedBox(height: 16),
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Öğrenci Bilgileri',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF04BF61),
+                      ),
+                    ),
+                    const Divider(),
+                    _buildInfoRow('Ad Soyad',
+                        '${selectedStudent!.name} ${selectedStudent!.surname}'),
+                    _buildInfoRow('Sınıf', selectedStudent!.className),
+                    _buildInfoRow('Öğrenci No', selectedStudent!.studentNumber),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  // 🌟 Scrollable eklendi
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'İşlem Bilgileri',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF04BF61),
+                        ),
+                      ),
+                      const Divider(),
+                      _buildInfoRow('İşlem', 'Kitap Ödünç Verme'),
+                      _buildInfoRow('Tarih', _formatDate(DateTime.now())),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (_isProcessing)
+              const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Color(0xFF04BF61),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -775,6 +796,8 @@ class _BorrowScreenState extends State<BorrowScreen> {
               style: const TextStyle(
                 fontWeight: FontWeight.w500,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
           ),
         ],
@@ -807,12 +830,14 @@ class _BorrowScreenState extends State<BorrowScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildStepIndicator(BOOK_SELECTION, 'Kitap'),
+                Flexible(child: _buildStepIndicator(BOOK_SELECTION, 'Kitap')),
                 _buildStepConnector(_currentStep > BOOK_SELECTION),
-                _buildStepIndicator(STUDENT_SELECTION, 'Öğrenci'),
+                Flexible(
+                    child: _buildStepIndicator(STUDENT_SELECTION, 'Öğrenci')),
                 _buildStepConnector(_currentStep > STUDENT_SELECTION),
-                _buildStepIndicator(CONFIRMATION, 'Onay'),
+                Flexible(child: _buildStepIndicator(CONFIRMATION, 'Onay')),
               ],
             ),
           ),
@@ -911,38 +936,40 @@ class _BorrowScreenState extends State<BorrowScreen> {
     final bool isActive = _currentStep >= step;
     final bool isCurrent = _currentStep == step;
 
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: isActive ? const Color(0xFF04BF61) : Colors.grey.shade300,
-              shape: BoxShape.circle,
-              border: isCurrent
-                  ? Border.all(color: const Color(0xFF04BF61), width: 3)
-                  : null,
-            ),
-            child: Center(
-              child: isActive
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : Text(
-                      '${step + 1}',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF04BF61) : Colors.grey.shade300,
+            shape: BoxShape.circle,
+            border: isCurrent
+                ? Border.all(color: const Color(0xFF04BF61), width: 3)
+                : null,
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? const Color(0xFF04BF61) : Colors.grey,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            ),
+          child: Center(
+            child: isActive
+                ? const Icon(Icons.check, color: Colors.white, size: 16)
+                : Text(
+                    '${step + 1}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: isActive ? const Color(0xFF04BF61) : Colors.grey,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            fontSize: 12,
+          ),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 
