@@ -65,7 +65,7 @@ class HomeScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          await Navigator.push(
+          final scannedBarcode = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const BarcodeScannerPage()),
           );
@@ -74,6 +74,21 @@ class HomeScreen extends StatelessWidget {
             final provider =
                 Provider.of<LibraryProvider>(context, listen: false);
             await provider.refreshBorrowedBooks();
+          }
+          // Barkod döndüyse ve kitap yoksa kitap ekleme dialogunu aç
+          if (scannedBarcode != null &&
+              scannedBarcode is String &&
+              scannedBarcode.isNotEmpty) {
+            // Kitap var mı kontrolü
+            final dbService =
+                Provider.of<DatabaseService>(context, listen: false);
+            final existingBook =
+                await dbService.getBookByBarcode(scannedBarcode);
+            if (existingBook == null) {
+              // Kitap ekleme dialogunu barkod ile aç
+              await BookScreen.showAddBookDialogWithBarcode(
+                  context, scannedBarcode);
+            }
           }
         },
         backgroundColor: const Color(0xFF04BF61),
