@@ -43,7 +43,7 @@ class BackupService {
 
       // Yedek dosya adını oluştur
       final backupFileName = fileName ??
-          'edubook_backup_${DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now())}.db';
+          'librolog_backup_${DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now())}.db';
       final backupFilePath = '${backupDir.path}/$backupFileName';
 
       // Veritabanı dosyasını kopyala
@@ -89,7 +89,7 @@ class BackupService {
       }
 
       // Platform uyumlu yedekleme dizini oluştur
-      final backupDir = Directory('${targetDir.path}/edubook_backups');
+      final backupDir = Directory('${targetDir.path}/librolog_backups');
 
       if (!await backupDir.exists()) {
         await backupDir.create(recursive: true);
@@ -257,7 +257,7 @@ class BackupService {
       }
 
       // Platform uyumlu yedekleme dizini
-      final backupDir = Directory('${targetDir.path}/edubook_backups');
+      final backupDir = Directory('${targetDir.path}/librolog_backups');
 
       if (!await backupDir.exists()) {
         await backupDir.create(recursive: true);

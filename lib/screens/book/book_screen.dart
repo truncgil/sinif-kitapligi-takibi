@@ -433,7 +433,7 @@ class _BookScreenState extends State<BookScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              'Kitap ekleme limitine ulaşıldı (${bookLimitProvider.currentBookCount}/9). Sınırsız kitap eklemek için satın alma yapın.'),
+              'Kitap ekleme limitine ulaşıldı (${bookLimitProvider.currentBookCount}). Sınırsız kitap eklemek için satın alma yapın.'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(8),
