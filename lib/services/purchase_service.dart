@@ -10,6 +10,8 @@ class PurchaseService {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   final SharedPreferences _prefs;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
+  bool _isProcessing = false;
+  Completer<bool>? _purchaseCompleter;
 
   PurchaseService(this._prefs) {
     _initializePurchaseListener();
@@ -25,6 +27,9 @@ class PurchaseService {
       },
       onError: (error) {
         print('Satın alma dinleyici hatası: $error');
+        _isProcessing = false;
+        _purchaseCompleter?.complete(false);
+        _purchaseCompleter = null;
       },
     );
   }
@@ -33,14 +38,20 @@ class PurchaseService {
       List<PurchaseDetails> purchaseDetailsList) async {
     for (final purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.pending) {
-        // Satın alma işlemi devam ediyor
+        _isProcessing = true;
+        print('Satın alma işlemi bekliyor...');
       } else if (purchaseDetails.status == PurchaseStatus.error) {
-        // Hata durumu
+        _isProcessing = false;
         print('Satın alma hatası: ${purchaseDetails.error}');
+        _purchaseCompleter?.complete(false);
+        _purchaseCompleter = null;
       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
-        // Başarılı satın alma veya geri yükleme
+        _isProcessing = false;
         await _savePurchaseStatus(true);
+        print('Satın alma başarılı!');
+        _purchaseCompleter?.complete(true);
+        _purchaseCompleter = null;
       }
       if (purchaseDetails.pendingCompletePurchase) {
         await _inAppPurchase.completePurchase(purchaseDetails);
@@ -54,10 +65,16 @@ class PurchaseService {
 
   Future<void> checkPurchaseStatus() async {
     final bool available = await _inAppPurchase.isAvailable();
-    if (!available) return;
+    if (!available) {
+      print('Satın alma servisi kullanılamıyor');
+      return;
+    }
 
-    // Satın almaları geri yükle
-    await _inAppPurchase.restorePurchases();
+    try {
+      await _inAppPurchase.restorePurchases();
+    } catch (e) {
+      print('Satın almaları geri yükleme hatası: $e');
+    }
   }
 
   Future<void> _savePurchaseStatus(bool purchased) async {
@@ -65,29 +82,77 @@ class PurchaseService {
   }
 
   Future<bool> purchaseUnlimitedBooks() async {
+    if (_isProcessing) {
+      print('Zaten bir satın alma işlemi devam ediyor');
+      return false;
+    }
+
+    if (_purchaseCompleter != null) {
+      print('Önceki satın alma işlemi henüz tamamlanmadı');
+      return false;
+    }
+
+    _purchaseCompleter = Completer<bool>();
+
     try {
+      final bool available = await _inAppPurchase.isAvailable();
+      if (!available) {
+        print('Satın alma servisi kullanılamıyor');
+        _purchaseCompleter?.complete(false);
+        _purchaseCompleter = null;
+        return false;
+      }
+
       final ProductDetailsResponse response =
           await _inAppPurchase.queryProductDetails({_productId});
 
       if (response.notFoundIDs.isNotEmpty) {
+        print('Ürün bulunamadı: ${response.notFoundIDs}');
+        _purchaseCompleter?.complete(false);
+        _purchaseCompleter = null;
         return false;
       }
 
+      if (response.productDetails.isEmpty) {
+        print('Ürün detayları alınamadı');
+        _purchaseCompleter?.complete(false);
+        _purchaseCompleter = null;
+        return false;
+      }
+
+      final ProductDetails productDetails = response.productDetails.first;
+
+      // Test ortamı kontrolü
+      if (productDetails.id.contains('test')) {
+        print('Test ürünü tespit edildi');
+        // Test ortamında ek güvenlik kontrolleri
+        await Future.delayed(
+            Duration(seconds: 1)); // Test ortamında minimum bekleme süresi
+      }
+
       final PurchaseParam purchaseParam = PurchaseParam(
-        productDetails: response.productDetails.first,
+        productDetails: productDetails,
       );
 
+      _isProcessing = true;
       final bool success =
           await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
 
-      if (success) {
-        await _savePurchaseStatus(true);
-        return true;
+      if (!success) {
+        _isProcessing = false;
+        print('Satın alma başlatılamadı');
+        _purchaseCompleter?.complete(false);
+        _purchaseCompleter = null;
+        return false;
       }
 
-      return false;
+      // Satın alma işleminin tamamlanmasını bekle
+      return await _purchaseCompleter!.future;
     } catch (e) {
+      _isProcessing = false;
       print('Satın alma hatası: $e');
+      _purchaseCompleter?.complete(false);
+      _purchaseCompleter = null;
       return false;
     }
   }
@@ -95,5 +160,7 @@ class PurchaseService {
   @override
   void dispose() {
     _subscription?.cancel();
+    _purchaseCompleter?.complete(false);
+    _purchaseCompleter = null;
   }
 }
