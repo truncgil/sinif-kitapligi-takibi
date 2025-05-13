@@ -8,7 +8,7 @@ class BookLimitProvider with ChangeNotifier {
   final DatabaseService _databaseService;
   bool _isUnlimited = false;
   int _bookCount = 0;
-  static const int _freeBookLimit = 9;
+  static const int _freeBookLimit = 20;
 
   BookLimitProvider(this._purchaseService, this._databaseService) {
     _initialize();
