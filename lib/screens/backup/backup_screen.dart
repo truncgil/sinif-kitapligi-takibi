@@ -2,11 +2,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../../services/backup/backup_service.dart';
 import '../../providers/library_provider.dart';
 import '../../constants/colors.dart';
+import '../../widgets/common/custom_app_bar.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -19,29 +19,11 @@ class _BackupScreenState extends State<BackupScreen> {
   final BackupService _backupService = BackupService();
   bool _isLoading = false;
   List<FileSystemEntity> _backups = [];
-  List<FileSystemEntity> _downloadBackups = [];
 
   @override
   void initState() {
     super.initState();
     _loadBackupsList();
-    _checkPermission();
-  }
-
-  Future<void> _checkPermission() async {
-    try {
-      // Depolama izni iste
-      final status = await Permission.storage.request();
-
-      if (status.isGranted) {
-        _loadDownloadBackups();
-      } else {
-        _showErrorSnackbar('Depolama izni olmadan yerel yedeklere erişilemez.');
-      }
-    } catch (e) {
-      // İzin isteği başarısız olursa
-      _showErrorSnackbar('İzin kontrolü sırasında hata oluştu: $e');
-    }
   }
 
   Future<void> _loadBackupsList() async {
@@ -60,17 +42,6 @@ class _BackupScreenState extends State<BackupScreen> {
       setState(() {
         _isLoading = false;
       });
-    }
-  }
-
-  Future<void> _loadDownloadBackups() async {
-    try {
-      final backups = await _backupService.listDownloadFolderBackups();
-      setState(() {
-        _downloadBackups = backups;
-      });
-    } catch (e) {
-      _showErrorSnackbar('İndirilenler klasörü yedekleri yüklenirken hata: $e');
     }
   }
 
@@ -107,43 +78,38 @@ class _BackupScreenState extends State<BackupScreen> {
     }
   }
 
-  Future<void> _exportToDownloadFolder(String backupPath) async {
+  Future<void> _shareBackup(String backupPath) async {
     try {
-      final status = await Permission.storage.request();
-
-      if (!status.isGranted) {
-        _showErrorSnackbar('Depolama izni verilmedi. Yedek dışa aktarılamadı.');
-        return;
-      }
-
-      final downloadPath =
-          await _backupService.exportToLocalStorage(backupPath);
-      _loadDownloadBackups();
-      _showSuccessSnackbar(
-          'Yedek dosyası başarıyla cihaz belleğine kaydedildi: ${path.basename(downloadPath)}');
+      await _backupService.shareBackup(backupPath);
     } catch (e) {
-      _showErrorSnackbar('Dışa aktarma sırasında hata oluştu: $e');
+      _showErrorSnackbar('Yedek paylaşılırken hata oluştu: $e');
+    }
+  }
+
+  Future<void> _deleteBackup(String backupPath) async {
+    try {
+      await _backupService.deleteBackup(backupPath);
+      _loadBackupsList();
+    } catch (e) {
+      _showErrorSnackbar('Yedek silinirken hata oluştu: $e');
     }
   }
 
   Future<void> _restoreBackup(String backupPath) async {
+    // Onay dialolu göster
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Veritabanı Geri Yükleme'),
+        title: const Text('Yedeği Geri Yükle'),
         content: const Text(
-            'Bu işlem mevcut veritabanınızı silecek ve yerine seçtiğiniz yedeği geri yükleyecektir.\n\n'
-            'Bu işlemi yapmak istediğinizden emin misiniz?'),
+            'Bu işlem mevcut veritabanınızı yedek ile değiştirecek. Mevcut verileriniz kaybolacak. Devam etmek istiyor musunuz?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('İptal'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
             child: const Text('Geri Yükle'),
           ),
         ],
@@ -157,21 +123,24 @@ class _BackupScreenState extends State<BackupScreen> {
     });
 
     try {
-      await _backupService.restoreDatabase(backupPath);
+      final success = await _backupService.restoreDatabase(backupPath);
+      if (success) {
+        _showSuccessSnackbar('Yedek başarıyla geri yüklendi');
 
-      // Veritabanı güncellendiği için Provider'ı da güncelle
-      if (mounted) {
-        final provider = Provider.of<LibraryProvider>(context, listen: false);
-        await provider.refreshBorrowedBooks();
-      }
+        // Veritabanı değiştiği için Provider'ı güncelle
+        if (mounted) {
+          final provider = Provider.of<LibraryProvider>(context, listen: false);
+          await provider.refreshBorrowedBooks();
+        }
 
-      _showSuccessSnackbar('Veritabanı başarıyla geri yüklendi.');
-
-      // Kısa bir süre bekleyip ana sayfaya dön
-      await Future.delayed(const Duration(milliseconds: 1000));
-      if (mounted) {
-        // Ana sayfaya dön
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // Kısa bir süre bekleyip ana sayfaya dön
+        await Future.delayed(const Duration(milliseconds: 1000));
+        if (mounted) {
+          // Ana sayfaya dön
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      } else {
+        _showErrorSnackbar('Geri yükleme başarısız oldu');
       }
     } catch (e) {
       _showErrorSnackbar('Geri yükleme sırasında hata oluştu: $e');
@@ -184,65 +153,41 @@ class _BackupScreenState extends State<BackupScreen> {
     }
   }
 
-  Future<void> _deleteBackup(String backupPath) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Yedeği Sil'),
-        content: const Text(
-          'Bu yedeği silmek istediğinizden emin misiniz?',
+  void _showSuccessSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Sil'),
-          ),
-        ],
       ),
     );
-
-    if (result != true) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await _backupService.deleteBackup(backupPath);
-      _loadBackupsList();
-      _showSuccessSnackbar('Yedek başarıyla silindi.');
-    } catch (e) {
-      _showErrorSnackbar('Yedek silinirken hata oluştu: $e');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
   }
 
   void _showErrorSnackbar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  void _showSuccessSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
     );
   }
 
   String _formatFileDate(FileSystemEntity entity) {
     try {
-      final stat = (entity as File).statSync();
-      return DateFormat('dd.MM.yyyy HH:mm').format(stat.modified);
+      final file = File(entity.path);
+      final modified = file.lastModifiedSync();
+      return DateFormat('dd.MM.yyyy HH:mm').format(modified);
     } catch (_) {
       return 'Tarih bilinmiyor';
     }
@@ -265,12 +210,15 @@ class _BackupScreenState extends State<BackupScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.backup,
-        title: const Text('Veri Yedekleme ve Geri Yükleme'),
+        centerTitle: true,
+        title: const Text(
+          'Veri Yedekleme ve Geri Yükleme',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
             onPressed: () {
               _loadBackupsList();
-              _loadDownloadBackups();
             },
             icon: const Icon(Icons.refresh),
             tooltip: 'Yenile',
@@ -280,33 +228,12 @@ class _BackupScreenState extends State<BackupScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
-              child: DefaultTabController(
-                length: 2,
-                child: Column(
-                  children: [
-                    const TabBar(
-                      tabs: [
-                        Tab(text: 'Uygulama Yedekleri'),
-                        Tab(text: 'Dış Yedekler'),
-                      ],
-                      labelColor: Colors.black,
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        children: [
-                          _buildAppBackupsTab(),
-                          _buildDownloadFolderTab(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              child: _buildBackupsScreen(),
             ),
     );
   }
 
-  Widget _buildAppBackupsTab() {
+  Widget _buildBackupsScreen() {
     return Column(
       children: [
         Padding(
@@ -319,14 +246,20 @@ class _BackupScreenState extends State<BackupScreen> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: ElevatedButton.icon(
-            onPressed: _createBackup,
-            icon: const Icon(Icons.backup),
-            label: const Text('Yeni Yedek Oluştur'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _createBackup,
+                  icon: const Icon(Icons.backup),
+                  label: const Text('Yeni Yedek Oluştur'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
@@ -390,42 +323,38 @@ class _BackupScreenState extends State<BackupScreen> {
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(left: 16),
                         child: const Icon(
-                          Icons.save_alt,
+                          Icons.share,
                           color: Colors.white,
                         ),
                       ),
                       confirmDismiss: (direction) async {
                         if (direction == DismissDirection.endToStart) {
-                          // Dışa aktarma işlemi
-                          await _exportToDownloadFolder(backup.path);
+                          // Paylaşma işlemi
+                          await _shareBackup(backup.path);
                           return false;
                         } else {
-                          // Silme işlemi
-                          return await showDialog(
+                          // Silme işlemi onayı
+                          final result = await showDialog<bool>(
                             context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: const Text('Yedeği Sil'),
-                                content: Text(
-                                    '$fileName yedeğini silmek istediğinize emin misiniz?'),
-                                actions: <Widget>[
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(false),
-                                    child: const Text('İptal'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(true),
-                                    child: const Text(
-                                      'Sil',
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+                            builder: (context) => AlertDialog(
+                              title: const Text('Yedeği Sil'),
+                              content: Text(
+                                  '$fileName dosyasını silmek istiyor musunuz?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                  child: const Text('İptal'),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                  child: const Text('Sil'),
+                                ),
+                              ],
+                            ),
                           );
+                          return result ?? false;
                         }
                       },
                       onDismissed: (direction) async {
@@ -475,94 +404,21 @@ class _BackupScreenState extends State<BackupScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           leading: const Icon(Icons.storage),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.restore),
-                            tooltip: 'Geri Yükle',
-                            onPressed: () => _restoreBackup(backup.path),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.share),
+                                tooltip: 'Paylaş',
+                                onPressed: () => _shareBackup(backup.path),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.restore),
+                                tooltip: 'Geri Yükle',
+                                onPressed: () => _restoreBackup(backup.path),
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDownloadFolderTab() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Bu sayfada cihazınızdaki uygulama belleğine kaydedilen yedeklerinizi görüntüleyebilir ve geri yükleyebilirsiniz.',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Row(
-            children: [
-              const Text(
-                'Cihaz Belleğindeki Yedekler',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const Spacer(),
-              Text(
-                '${_downloadBackups.length} yedek',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _downloadBackups.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.folder_outlined,
-                          size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Cihaz belleğinde yedek bulunamadı',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Yedeklerinizi ilk sekmede "Cihaz Belleğine Kaydet" seçeneği ile dışa aktarabilirsiniz',
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _downloadBackups.length,
-                  itemBuilder: (context, index) {
-                    final backup = _downloadBackups[index];
-                    final fileName = path.basename(backup.path);
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 4.0),
-                      child: ListTile(
-                        title: Text(
-                          fileName,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          '${_formatFileDate(backup)} - ${_formatFileSize(backup)}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        leading: const Icon(Icons.download_done),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.restore),
-                          tooltip: 'Geri Yükle',
-                          onPressed: () => _restoreBackup(backup.path),
                         ),
                       ),
                     );

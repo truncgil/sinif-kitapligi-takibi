@@ -81,7 +81,7 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
         centerTitle: true,
         title: const Text(
           'Sınıflar',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: Column(

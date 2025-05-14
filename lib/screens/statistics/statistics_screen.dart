@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/database/database_service.dart';
 import '../../constants/colors.dart';
+import '../../widgets/common/custom_app_bar.dart';
 
 class StatisticsScreen extends StatelessWidget {
   const StatisticsScreen({super.key});

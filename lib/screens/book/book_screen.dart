@@ -5,6 +5,7 @@ import '../../services/database/database_service.dart';
 import '../../services/barcode_scanner/barcode_scanner_service.dart';
 import '../../constants/colors.dart';
 import '../../providers/book_limit_provider.dart';
+import '../../widgets/common/custom_app_bar.dart';
 import 'book_detail_screen.dart';
 
 /// Kitap işlemleri ekranı

@@ -15,6 +15,7 @@ class PurchaseService {
 
   PurchaseService(this._prefs) {
     _initializePurchaseListener();
+    _checkExistingPurchase(); // Uygulama başlatıldığında mevcut satın almaları kontrol et
   }
 
   void _initializePurchaseListener() {
@@ -82,6 +83,13 @@ class PurchaseService {
   }
 
   Future<bool> purchaseUnlimitedBooks() async {
+    // Önce mevcut satın almayı kontrol et
+    final bool isPurchased = await isUnlimitedBooksPurchased();
+    if (isPurchased) {
+      print('Bu ürün zaten satın alınmış');
+      return true;
+    }
+
     if (_isProcessing) {
       print('Zaten bir satın alma işlemi devam ediyor');
       return false;
@@ -154,6 +162,26 @@ class PurchaseService {
       _purchaseCompleter?.complete(false);
       _purchaseCompleter = null;
       return false;
+    }
+  }
+
+  Future<void> _checkExistingPurchase() async {
+    try {
+      final bool available = await _inAppPurchase.isAvailable();
+      if (!available) return;
+
+      // Mevcut satın almaları kontrol et
+      final bool isPurchased = await isUnlimitedBooksPurchased();
+      if (isPurchased) {
+        print('Daha önce yapılmış satın alma tespit edildi');
+        await _savePurchaseStatus(true);
+        return;
+      }
+
+      // Satın almaları geri yükle
+      await _inAppPurchase.restorePurchases();
+    } catch (e) {
+      print('Mevcut satın alma kontrolü hatası: $e');
     }
   }
 

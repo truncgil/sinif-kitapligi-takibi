@@ -5,11 +5,25 @@ import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:share_plus/share_plus.dart';
 import '../database/database_service.dart';
 
 /// Veritabanı yedekleme ve geri yükleme işlemlerini yöneten servis sınıfı
 class BackupService {
   final DatabaseService _databaseService = DatabaseService();
+
+  /// Yedek dizininin yolunu döndürür
+  Future<String> getBackupPath() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final backupDir = Directory('${directory.path}/backups');
+
+    // Dizin yoksa oluştur
+    if (!await backupDir.exists()) {
+      await backupDir.create(recursive: true);
+    }
+
+    return backupDir.path;
+  }
 
   /// Veritabanını belirli bir konuma yedekler
   ///
@@ -24,6 +38,9 @@ class BackupService {
       final db = await _databaseService.database;
       await db.close(); // Yedekleme için veritabanını kapat
 
+      // Uygulama yeniden başlayana kadar bekleme
+      await Future.delayed(const Duration(milliseconds: 500));
+
       // Orjinal veritabanı dosyasını bul
       final dbPath = await getDatabasesPath();
       final dbFile = File(join(dbPath, 'library.db'));
@@ -33,38 +50,39 @@ class BackupService {
       }
 
       // Yedekleme için hedef dizini al
-      final directory = await getApplicationDocumentsDirectory();
-      final backupDir = Directory('${directory.path}/backups');
-
-      // Eğer yedekleme dizini yoksa oluştur
-      if (!await backupDir.exists()) {
-        await backupDir.create(recursive: true);
-      }
+      final backupDir = await getBackupPath();
 
       // Yedek dosya adını oluştur
       final backupFileName = fileName ??
           'librolog_backup_${DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now())}.db';
-      final backupFilePath = '${backupDir.path}/$backupFileName';
+      final backupFilePath = '$backupDir/$backupFileName';
 
       // Veritabanı dosyasını kopyala
       await dbFile.copy(backupFilePath);
 
-      // Veritabanını tekrar aç
-      await _databaseService.initialize();
+      // Veritabanını tamamen kapatıp yeniden başlatmak için
+      // bir gecikme ekleyip resetDatabase çağırıyoruz
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _databaseService.resetDatabase();
 
       return backupFilePath;
     } catch (e) {
       // Hata durumunda veritabanını tekrar açmayı dene
-      await _databaseService.initialize();
+      try {
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _databaseService.resetDatabase();
+      } catch (innerError) {
+        // İç hata görmezden gelinebilir
+      }
       rethrow;
     }
   }
 
-  /// Yerel cihaza dosya olarak yedekler
-  Future<String> exportToLocalStorage(String backupPath) async {
+  /// Yedeği cihaz üzerinden paylaşır
+  Future<void> shareBackup(String backupPath) async {
     try {
       if (kIsWeb) {
-        throw Exception('Web platformunda dışa aktarma henüz desteklenmiyor.');
+        throw Exception('Web platformunda paylaşım henüz desteklenmiyor.');
       }
 
       final file = File(backupPath);
@@ -72,38 +90,9 @@ class BackupService {
         throw Exception('Paylaşılacak yedek dosyası bulunamadı.');
       }
 
-      final bytes = await file.readAsBytes();
-
-      // Platform kontrolü
-      Directory? targetDir;
-      if (Platform.isAndroid) {
-        targetDir = await getExternalStorageDirectory();
-      } else if (Platform.isIOS) {
-        targetDir = await getApplicationDocumentsDirectory();
-      } else {
-        targetDir = await getApplicationDocumentsDirectory();
-      }
-
-      if (targetDir == null) {
-        throw Exception('Hedef dizin oluşturulamadı.');
-      }
-
-      // Platform uyumlu yedekleme dizini oluştur
-      final backupDir = Directory('${targetDir.path}/librolog_backups');
-
-      if (!await backupDir.exists()) {
-        await backupDir.create(recursive: true);
-      }
-
-      // Dosya adını al
       final fileName = basename(backupPath);
-
-      // Dosyayı kopyala
-      final downloadPath = '${backupDir.path}/$fileName';
-      final downloadFile = File(downloadPath);
-      await downloadFile.writeAsBytes(bytes);
-
-      return downloadPath;
+      await Share.shareXFiles([XFile(backupPath)],
+          text: 'LibroLog Veritabanı Yedeği: $fileName');
     } catch (e) {
       rethrow;
     }
@@ -165,17 +154,10 @@ class BackupService {
       }
 
       // Yedekleme dizinini al
-      final directory = await getApplicationDocumentsDirectory();
-      final backupDir = Directory('${directory.path}/backups');
-
-      // Dizin yoksa oluştur
-      if (!await backupDir.exists()) {
-        await backupDir.create(recursive: true);
-        return [];
-      }
+      final backupDir = await getBackupPath();
 
       // Dizindeki tüm .db uzantılı dosyaları listele
-      final entities = await backupDir.list().toList();
+      final entities = await Directory(backupDir).list().toList();
       return entities
           .where((entity) => entity is File && entity.path.endsWith('.db'))
           .toList();
@@ -214,61 +196,15 @@ class BackupService {
       final fileName = basename(sourceFilePath);
 
       // Hedef dizini al
-      final directory = await getApplicationDocumentsDirectory();
-      final backupDir = Directory('${directory.path}/backups');
-
-      // Dizin yoksa oluştur
-      if (!await backupDir.exists()) {
-        await backupDir.create(recursive: true);
-      }
+      final backupDir = await getBackupPath();
 
       // Hedef dosya yolu
-      final targetPath = '${backupDir.path}/$fileName';
+      final targetPath = '$backupDir/$fileName';
 
       // Dosyayı yedekleme dizinine kopyala
       await sourceFile.copy(targetPath);
 
       return true;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// İndirilenler klasöründeki yedekleri listeler
-  Future<List<FileSystemEntity>> listDownloadFolderBackups() async {
-    try {
-      if (kIsWeb) {
-        throw Exception(
-            'Web platformunda yedekleri listeleme henüz desteklenmiyor.');
-      }
-
-      // Platform kontrolü
-      Directory? targetDir;
-      if (Platform.isAndroid) {
-        targetDir = await getExternalStorageDirectory();
-      } else if (Platform.isIOS) {
-        targetDir = await getApplicationDocumentsDirectory();
-      } else {
-        targetDir = await getApplicationDocumentsDirectory();
-      }
-
-      if (targetDir == null) {
-        return [];
-      }
-
-      // Platform uyumlu yedekleme dizini
-      final backupDir = Directory('${targetDir.path}/librolog_backups');
-
-      if (!await backupDir.exists()) {
-        await backupDir.create(recursive: true);
-        return [];
-      }
-
-      // Dizindeki tüm .db uzantılı dosyaları listele
-      final entities = await backupDir.list().toList();
-      return entities
-          .where((entity) => entity is File && entity.path.endsWith('.db'))
-          .toList();
     } catch (e) {
       rethrow;
     }
