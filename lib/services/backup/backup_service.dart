@@ -36,10 +36,12 @@ class BackupService {
 
       // Yedekleme için veritabanı dosyasının yolunu al
       final db = await _databaseService.database;
-      await db.close(); // Yedekleme için veritabanını kapat
+
+      // Veritabanını güvenli bir şekilde kapat
+      await db.close();
 
       // Uygulama yeniden başlayana kadar bekleme
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(seconds: 3));
 
       // Orjinal veritabanı dosyasını bul
       final dbPath = await getDatabasesPath();
@@ -60,16 +62,17 @@ class BackupService {
       // Veritabanı dosyasını kopyala
       await dbFile.copy(backupFilePath);
 
-      // Veritabanını tamamen kapatıp yeniden başlatmak için
-      // bir gecikme ekleyip resetDatabase çağırıyoruz
-      await Future.delayed(const Duration(milliseconds: 500));
-      await _databaseService.resetDatabase();
+      // Veritabanını yeniden başlat
+      await _databaseService.initialize();
 
       return backupFilePath;
     } catch (e) {
       // Hata durumunda veritabanını tekrar açmayı dene
       try {
+        await Future.delayed(const Duration(seconds: 3));
+        await _databaseService.initialize();
         await Future.delayed(const Duration(milliseconds: 500));
+
         await _databaseService.resetDatabase();
       } catch (innerError) {
         // İç hata görmezden gelinebilir

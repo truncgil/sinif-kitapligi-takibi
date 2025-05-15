@@ -305,6 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialPageRoute(builder: (_) => const StatisticsScreen()),
             ),
       },
+      /*
       {
         'title': 'Yedekleme',
         'icon': Icons.backup,
@@ -314,6 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialPageRoute(builder: (_) => const BackupScreen()),
             ),
       },
+      */
     ];
 
     return GridView.builder(
