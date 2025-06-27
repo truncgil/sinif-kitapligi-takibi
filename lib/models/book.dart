@@ -32,11 +32,11 @@ class Book {
   factory Book.fromMap(Map<String, dynamic> map) {
     return Book(
       id: map['id'] as int?,
-      title: map['title'] as String,
-      author: map['author'] as String,
-      isbn: map['isbn'] as String,
-      barcode: map['barcode'] as String,
-      isAvailable: (map['isAvailable'] as int) == 1,
+      title: (map['title'] as String?) ?? '',
+      author: (map['author'] as String?) ?? '',
+      isbn: (map['isbn'] as String?) ?? '',
+      barcode: (map['barcode'] as String?) ?? '',
+      isAvailable: (map['isAvailable'] as int?) == 1,
     );
   }
 

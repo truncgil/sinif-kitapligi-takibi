@@ -7,6 +7,7 @@ import '../../models/book.dart';
 import '../../models/borrow_record.dart';
 import '../../models/class_room.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 /// Veritabanı işlemlerini yöneten servis sınıfı
 class DatabaseService {
@@ -199,9 +200,15 @@ class DatabaseService {
   }
 
   Future<List<Book>> getAllBooks() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('books');
-    return List.generate(maps.length, (i) => Book.fromMap(maps[i]));
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query('books');
+      return List.generate(maps.length, (i) => Book.fromMap(maps[i]));
+    } catch (e) {
+      debugPrint('Kitaplar getirilirken hata: $e');
+      // Hata durumunda boş liste döndür
+      return <Book>[];
+    }
   }
 
   Future<Book?> getBookByBarcode(String barcode) async {
