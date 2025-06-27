@@ -45,6 +45,7 @@ dependencies:
   path_provider: ^2.1.5
   permission_handler: ^12.0.0+1
   in_app_purchase: ^3.1.13
+  in_app_purchase_storekit: ^0.3.11 # iOS için StoreKit desteği
   shared_preferences: ^2.2.2
   share_plus: ^11.0.0
   receive_intent: ^0.2.7

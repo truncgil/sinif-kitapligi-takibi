@@ -7,7 +7,6 @@ import '../../services/database/database_service.dart';
 import '../../constants/colors.dart';
 import '../barcode_scanner/barcode_scanner_page.dart';
 import '../borrow/borrow_screen.dart';
-import '../../providers/library_provider.dart';
 import '../book/book_detail_screen.dart';
 
 class StudentDetailScreen extends StatefulWidget {

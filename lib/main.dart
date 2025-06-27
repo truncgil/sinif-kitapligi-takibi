@@ -17,6 +17,9 @@ import 'services/backup/backup_service.dart';
 import 'services/purchase_service.dart';
 import 'providers/library_provider.dart';
 import 'providers/book_limit_provider.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
+import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
 
 // Uygulama çapında anahtar
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -43,15 +46,30 @@ void main() async {
   }
 
   try {
-    final databaseService = DatabaseService();
     final prefs = await SharedPreferences.getInstance();
     final purchaseService = PurchaseService(prefs);
     final backupService = BackupService();
 
     // Veritabanını sıfırlamak yerine varolan veritabanını kullan
     logDebug('Veritabanı başlatılıyor...');
+    final databaseService = DatabaseService();
     await databaseService.initialize();
     logDebug('Veritabanı başarıyla başlatıldı');
+
+    // Satın alma sistemini yapılandır (iOS için kritik)
+    if (!kIsWeb && Platform.isIOS) {
+      logDebug('iOS için satın alma sistemi yapılandırılıyor...');
+      try {
+        // iOS için AppStore konfigürasyonu
+        final iosPlatform = InAppPurchase.instance
+            .getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
+
+        await iosPlatform.setDelegate(ExamplePaymentQueueDelegate());
+        logDebug('iOS ödeme delegasyonu başarıyla ayarlandı');
+      } catch (e) {
+        logDebug('iOS satın alma yapılandırması hatası: $e');
+      }
+    }
 
     runApp(
       MultiProvider(
@@ -608,5 +626,21 @@ class _AppStartWidgetState extends State<AppStartWidget>
         ),
       ),
     );
+  }
+}
+
+// AppStore ödeme işlemleri için özel delegasyon sınıfı
+class ExamplePaymentQueueDelegate implements SKPaymentQueueDelegateWrapper {
+  @override
+  bool shouldContinueTransaction(
+      SKPaymentTransactionWrapper transaction, SKStorefrontWrapper storefront) {
+    logDebug(
+        'Ödeme işlemi devam etmeli mi kontrolü: ${transaction.transactionIdentifier}');
+    return true; // Tüm işlemlere devam et
+  }
+
+  @override
+  bool shouldShowPriceConsent() {
+    return false; // Fiyat değişikliklerinde kullanıcıya bildirim gösterme
   }
 }

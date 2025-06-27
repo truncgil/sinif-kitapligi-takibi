@@ -4,7 +4,6 @@ import '../../models/student.dart';
 import '../../models/class_room.dart';
 import '../../services/database/database_service.dart';
 import '../../constants/colors.dart';
-import '../../widgets/common/custom_app_bar.dart';
 import 'student_detail_screen.dart';
 
 /// Öğrenci işlemleri ekranı

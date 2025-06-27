@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../services/backup/backup_service.dart';
 import '../../providers/library_provider.dart';
 import '../../constants/colors.dart';
-import '../../widgets/common/custom_app_bar.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});

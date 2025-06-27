@@ -61,15 +61,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.amber,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.workspace_premium,
                               color: Colors.white,
                               size: 20,
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Text(
                               'Premium',
                               style: TextStyle(
@@ -202,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onBackground,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ],

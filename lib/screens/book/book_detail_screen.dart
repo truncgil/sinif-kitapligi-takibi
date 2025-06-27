@@ -67,7 +67,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('Hata: {snapshot.error}'));
+                  return const Center(child: Text('Hata: {snapshot.error}'));
                 }
 
                 final borrowHistory = snapshot.data ?? [];
