@@ -238,57 +238,60 @@ class _BookScreenState extends State<BookScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ToggleButtons(
-                    isSelected: [
-                      _filterStatus == 'Tümü',
-                      _filterStatus == 'Mevcut',
-                      _filterStatus == 'Ödünç Verildi',
-                    ],
-                    onPressed: (index) {
-                      setState(() {
-                        switch (index) {
-                          case 0:
-                            _filterStatus = 'Tümü';
-                            break;
-                          case 1:
-                            _filterStatus = 'Mevcut';
-                            break;
-                          case 2:
-                            _filterStatus = 'Ödünç Verildi';
-                            break;
-                        }
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    selectedBorderColor: const Color(0xFF04BF61),
-                    selectedColor: Colors.white,
-                    fillColor: const Color(0xFF04BF61),
-                    color: Colors.black,
-                    borderColor: Colors.grey,
-                    children: const [
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('Tümü', textAlign: TextAlign.center),
+                ListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    ToggleButtons(
+                      isSelected: [
+                        _filterStatus == 'Tümü',
+                        _filterStatus == 'Mevcut',
+                        _filterStatus == 'Ödünç Verildi',
+                      ],
+                      onPressed: (index) {
+                        setState(() {
+                          switch (index) {
+                            case 0:
+                              _filterStatus = 'Tümü';
+                              break;
+                            case 1:
+                              _filterStatus = 'Mevcut';
+                              break;
+                            case 2:
+                              _filterStatus = 'Ödünç Verildi';
+                              break;
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      selectedBorderColor: const Color(0xFF04BF61),
+                      selectedColor: Colors.white,
+                      fillColor: const Color(0xFF04BF61),
+                      color: Colors.black,
+                      borderColor: Colors.grey,
+                      children: const [
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('Tümü', textAlign: TextAlign.center),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('Mevcut', textAlign: TextAlign.center),
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('Mevcut', textAlign: TextAlign.center),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('Ödünç Verildi',
-                              textAlign: TextAlign.center),
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('Ödünç Verildi',
+                                textAlign: TextAlign.center),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
