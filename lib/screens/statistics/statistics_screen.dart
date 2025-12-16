@@ -71,11 +71,102 @@ class StatisticsScreen extends StatelessWidget {
                   color: Colors.red,
                 ),
               ),
+              GestureDetector(
+                onTap: () {
+                  _showMostBorrowedBooks(context, dbService);
+                },
+                child: _StatisticCard(
+                  title: 'En Çok Okunan Kitaplar',
+                  value: 'Liste',
+                  icon: Icons.stars,
+                  color: Colors.amber,
+                ),
+              ),
             ],
           );
         },
       ),
     );
+  }
+
+  Future<void> _showMostBorrowedBooks(
+      BuildContext context, DatabaseService dbService) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final books = await dbService.getMostBorrowedBooks();
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'En Çok Okunan Kitaplar (Top 10)',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const Divider(),
+                Expanded(
+                  child: books.isEmpty
+                      ? const Center(
+                          child: Text('Henüz hiç kitap okunmamış.'),
+                        )
+                      : ListView.builder(
+                          controller: scrollController,
+                          itemCount: books.length,
+                          itemBuilder: (context, index) {
+                            final bookData = books[index];
+                            final book = Book.fromMap(bookData);
+                            final count = bookData['borrowCount'];
+                            
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: index < 3 ? Colors.amber : Colors.blue,
+                                child: Text('${index + 1}'),
+                              ),
+                              title: Text(book.title),
+                              subtitle: Text(book.author),
+                              trailing: Chip(
+                                label: Text('$count kez'),
+                                backgroundColor: Colors.green.shade100,
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hata: $e')),
+      );
+    }
   }
 
   Future<void> _showNeverBorrowedBooks(

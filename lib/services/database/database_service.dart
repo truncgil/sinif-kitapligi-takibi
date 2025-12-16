@@ -796,6 +796,21 @@ class DatabaseService {
     return List.generate(result.length, (i) => Book.fromMap(result[i]));
   }
 
+  Future<List<Map<String, dynamic>>> getMostBorrowedBooks(
+      {int limit = 10}) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT b.*, COUNT(br.id) as borrowCount
+      FROM books b
+      JOIN borrow_records br ON b.id = br.bookId
+      GROUP BY b.id
+      ORDER BY borrowCount DESC
+      LIMIT ?
+    ''', [limit]);
+
+    return result;
+  }
+
   /// Örnek 20 kitap ekler
   Future<void> insertSampleBooks() async {
     final db = await database;
