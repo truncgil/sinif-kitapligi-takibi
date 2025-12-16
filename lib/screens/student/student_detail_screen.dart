@@ -9,6 +9,7 @@ import '../barcode_scanner/barcode_scanner_page.dart';
 import '../borrow/borrow_screen.dart';
 import '../book/book_detail_screen.dart';
 import '../../widgets/common/toast_message.dart';
+import '../../services/export/excel_export_service.dart';
 
 class StudentDetailScreen extends StatefulWidget {
   final Student student;
@@ -41,6 +42,31 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
       _totalBorrowCountFuture =
           _databaseService.getTotalBorrowCountByStudent(widget.student.id!);
     });
+  }
+
+  Future<void> _exportStudentData() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final dbService = Provider.of<DatabaseService>(context, listen: false);
+      final exportService = ExcelExportService(dbService);
+      
+      final studentName = '${widget.student.name} ${widget.student.surname}';
+      await exportService.exportStudentData(widget.student.id!, studentName);
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      _showSuccessMessage('Öğrenci verileri Excel dosyası olarak hazırlandı.');
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      _showErrorMessage('Hata: $e');
+    }
   }
 
   /// Barkod tarayıcıyı açar ve sonucu işler
@@ -124,6 +150,13 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
           '${widget.student.name} ${widget.student.surname}',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            onPressed: _exportStudentData,
+            icon: const Icon(Icons.file_download),
+            tooltip: 'Excel\'e Aktar',
+          ),
+        ],
       ),
       body: Column(
         children: [
