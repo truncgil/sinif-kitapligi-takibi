@@ -38,41 +38,6 @@ class StatisticsScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _StatisticCard(
-                title: 'Toplam Kitap',
-                value: stats['totalBooks']?.toString() ?? '0',
-                icon: Icons.book,
-                color: Colors.blue,
-              ),
-              _StatisticCard(
-                title: 'Toplam Öğrenci',
-                value: stats['totalStudents']?.toString() ?? '0',
-                icon: Icons.people,
-                color: Colors.green,
-              ),
-              _StatisticCard(
-                title: 'Ödünç Verilen Kitaplar',
-                value: stats['borrowedBooks']?.toString() ?? '0',
-                icon: Icons.book_online,
-                color: Colors.orange,
-              ),
-              _StatisticCard(
-                title: 'Toplam Sınıf',
-                value: stats['totalClasses']?.toString() ?? '0',
-                icon: Icons.class_,
-                color: Colors.purple,
-              ),
-              GestureDetector(
-                onTap: () {
-                  _showNeverBorrowedBooks(context, dbService);
-                },
-                child: _StatisticCard(
-                  title: 'Hiç Okunmayan Kitaplar',
-                  value: stats['neverBorrowedBooks']?.toString() ?? '0',
-                  icon: Icons.menu_book,
-                  color: Colors.red,
-                ),
-              ),
               GestureDetector(
                 onTap: () {
                   _showMostBorrowedBooks(context, dbService);
@@ -105,6 +70,41 @@ class StatisticsScreen extends StatelessWidget {
                   icon: Icons.calendar_month,
                   color: Colors.indigo,
                 ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  _showNeverBorrowedBooks(context, dbService);
+                },
+                child: _StatisticCard(
+                  title: 'Hiç Okunmayan Kitaplar',
+                  value: stats['neverBorrowedBooks']?.toString() ?? '0',
+                  icon: Icons.menu_book,
+                  color: Colors.red,
+                ),
+              ),
+              _StatisticCard(
+                title: 'Toplam Kitap',
+                value: stats['totalBooks']?.toString() ?? '0',
+                icon: Icons.book,
+                color: Colors.blue,
+              ),
+              _StatisticCard(
+                title: 'Toplam Öğrenci',
+                value: stats['totalStudents']?.toString() ?? '0',
+                icon: Icons.people,
+                color: Colors.green,
+              ),
+              _StatisticCard(
+                title: 'Ödünç Verilen Kitaplar',
+                value: stats['borrowedBooks']?.toString() ?? '0',
+                icon: Icons.book_online,
+                color: Colors.orange,
+              ),
+              _StatisticCard(
+                title: 'Toplam Sınıf',
+                value: stats['totalClasses']?.toString() ?? '0',
+                icon: Icons.class_,
+                color: Colors.purple,
               ),
             ],
           );
