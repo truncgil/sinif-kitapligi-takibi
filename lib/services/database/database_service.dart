@@ -811,6 +811,21 @@ class DatabaseService {
     return result;
   }
 
+  Future<List<Map<String, dynamic>>> getMostReadingStudents(
+      {int limit = 10}) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT s.*, COUNT(br.id) as readCount
+      FROM students s
+      JOIN borrow_records br ON s.id = br.studentId
+      GROUP BY s.id
+      ORDER BY readCount DESC
+      LIMIT ?
+    ''', [limit]);
+
+    return result;
+  }
+
   /// Örnek 20 kitap ekler
   Future<void> insertSampleBooks() async {
     final db = await database;

@@ -4,6 +4,8 @@ import '../../services/database/database_service.dart';
 import '../../constants/colors.dart';
 import '../../models/book.dart';
 
+import '../../models/student.dart';
+
 class StatisticsScreen extends StatelessWidget {
   const StatisticsScreen({super.key});
 
@@ -82,11 +84,103 @@ class StatisticsScreen extends StatelessWidget {
                   color: Colors.amber,
                 ),
               ),
+              GestureDetector(
+                onTap: () {
+                  _showMostReadingStudents(context, dbService);
+                },
+                child: _StatisticCard(
+                  title: 'En Çok Okuyan Öğrenciler',
+                  value: 'Liste',
+                  icon: Icons.school,
+                  color: Colors.teal,
+                ),
+              ),
             ],
           );
         },
       ),
     );
+  }
+
+  Future<void> _showMostReadingStudents(
+      BuildContext context, DatabaseService dbService) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final students = await dbService.getMostReadingStudents();
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'En Çok Okuyan Öğrenciler (Top 10)',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const Divider(),
+                Expanded(
+                  child: students.isEmpty
+                      ? const Center(
+                          child: Text('Henüz hiç kitap okunmamış.'),
+                        )
+                      : ListView.builder(
+                          controller: scrollController,
+                          itemCount: students.length,
+                          itemBuilder: (context, index) {
+                            final studentData = students[index];
+                            final student = Student.fromMap(studentData);
+                            final count = studentData['readCount'];
+
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor:
+                                    index < 3 ? Colors.amber : Colors.teal,
+                                child: Text('${index + 1}'),
+                              ),
+                              title: Text('${student.name} ${student.surname}'),
+                              subtitle: Text('${student.className} - ${student.studentNumber}'),
+                              trailing: Chip(
+                                label: Text('$count kitap'),
+                                backgroundColor: Colors.blue.shade100,
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hata: $e')),
+      );
+    }
   }
 
   Future<void> _showMostBorrowedBooks(
