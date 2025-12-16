@@ -491,14 +491,15 @@ class _BookScreenState extends State<BookScreen> {
                               style: const TextStyle(color: Colors.white),
                             ),
                           ),
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
                                     BookDetailScreen(book: book),
                               ),
                             );
+                            _refreshBooks(); // Detay sayfasından dönünce listeyi yenile
                           },
                         ),
                       ),
