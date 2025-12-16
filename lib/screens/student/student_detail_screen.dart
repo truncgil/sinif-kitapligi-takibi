@@ -24,6 +24,7 @@ class StudentDetailScreen extends StatefulWidget {
 class _StudentDetailScreenState extends State<StudentDetailScreen> {
   late DatabaseService _databaseService;
   late Future<List<BorrowRecord>> _borrowRecordsFuture;
+  late Future<int> _totalBorrowCountFuture;
 
   @override
   void initState() {
@@ -35,7 +36,9 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
   void _loadBorrowRecords() {
     setState(() {
       _borrowRecordsFuture =
-          _databaseService.getBorrowRecordsByStudentId(widget.student.id!);
+          _databaseService.getBorrowRecordsByStudent(widget.student.id!);
+      _totalBorrowCountFuture =
+          _databaseService.getTotalBorrowCountByStudent(widget.student.id!);
     });
   }
 
@@ -159,6 +162,15 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                       '${widget.student.name} ${widget.student.surname}'),
                   _buildInfoRow('Öğrenci No', widget.student.studentNumber),
                   _buildInfoRow('Sınıf', widget.student.className),
+                  FutureBuilder<int>(
+                    future: _totalBorrowCountFuture,
+                    builder: (context, snapshot) {
+                      return _buildInfoRow(
+                        'Toplam Kitap',
+                        snapshot.hasData ? '${snapshot.data}' : '-',
+                      );
+                    },
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,

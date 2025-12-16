@@ -688,6 +688,16 @@ class DatabaseService {
     return List.generate(maps.length, (i) => BorrowRecord.fromMap(maps[i]));
   }
 
+  Future<int> getTotalBorrowCountByStudent(int studentId) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM borrow_records 
+      WHERE studentId = ?
+    ''', [studentId]);
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
   Future<int> getActiveBorrowCountByStudentId(int studentId) async {
     final db = await database;
     final result = await db.rawQuery('''
