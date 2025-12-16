@@ -8,6 +8,7 @@ import '../../constants/colors.dart';
 import '../barcode_scanner/barcode_scanner_page.dart';
 import '../borrow/borrow_screen.dart';
 import '../book/book_detail_screen.dart';
+import '../../widgets/common/toast_message.dart';
 
 class StudentDetailScreen extends StatefulWidget {
   final Student student;
@@ -105,32 +106,12 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
 
   void _showErrorMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
+    showToastMessage(context, message: message, isSuccess: false);
   }
 
   void _showSuccessMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF04BF61),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
+    showToastMessage(context, message: message, isSuccess: true);
   }
 
   @override

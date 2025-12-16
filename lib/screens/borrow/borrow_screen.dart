@@ -842,28 +842,16 @@ class _BorrowScreenState extends State<BorrowScreen> {
             ),
           ),
 
-          // Ana içerik
-          Expanded(
-            child: IndexedStack(
-              index: _currentStep,
-              children: [
-                _buildBookSelectionStep(),
-                _buildStudentSelectionStep(),
-                _buildConfirmationStep(),
-              ],
-            ),
-          ),
-
-          // Alt kontroller
+          // Kontroller (Üstte)
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 4,
-                  offset: const Offset(0, -2),
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -898,6 +886,18 @@ class _BorrowScreenState extends State<BorrowScreen> {
                         fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
+              ],
+            ),
+          ),
+
+          // Ana içerik
+          Expanded(
+            child: IndexedStack(
+              index: _currentStep,
+              children: [
+                _buildBookSelectionStep(),
+                _buildStudentSelectionStep(),
+                _buildConfirmationStep(),
               ],
             ),
           ),

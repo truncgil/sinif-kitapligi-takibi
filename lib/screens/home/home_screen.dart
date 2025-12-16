@@ -13,6 +13,7 @@ import '../barcode_scanner/barcode_scanner_page.dart';
 import '../../constants/colors.dart';
 import '../../providers/book_limit_provider.dart';
 import '../../services/export/excel_export_service.dart';
+import '../../widgets/common/toast_message.dart';
 
 /// Ana ekran
 class HomeScreen extends StatefulWidget {
@@ -38,25 +39,19 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Veriler Excel dosyası olarak hazırlandı.'),
-          backgroundColor: const Color(0xFF04BF61),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
+      showToastMessage(
+        context,
+        message: 'Veriler Excel dosyası olarak hazırlandı.',
+        isSuccess: true,
       );
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Hata: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
+      showToastMessage(
+        context,
+        message: 'Hata: $e',
+        isSuccess: false,
       );
     }
   }
