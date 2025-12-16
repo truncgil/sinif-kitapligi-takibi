@@ -149,10 +149,15 @@ class _BookScreenState extends State<BookScreen> {
 
   Future<void> _initializeBooks() async {
     try {
+      debugPrint('🚀 LibroLog Debug: _initializeBooks başladı');
       // Veritabanının başlatıldığından emin ol
       await _databaseService.initialize();
+      debugPrint('🚀 LibroLog Debug: Veritabanı başlatıldı');
       _refreshBooks();
+      debugPrint('🚀 LibroLog Debug: Kitaplar yenilendi');
     } catch (e) {
+      debugPrint('🚀 LibroLog Debug: _initializeBooks hatası: $e');
+      debugPrint('🚀 LibroLog Debug: Hata stack trace: ${StackTrace.current}');
       if (mounted) {
         setState(() {
           _booksFuture = Future.error(e);
@@ -162,10 +167,13 @@ class _BookScreenState extends State<BookScreen> {
   }
 
   void _refreshBooks() {
+    debugPrint('🚀 LibroLog Debug: _refreshBooks çağrıldı');
     setState(() {
       _booksFuture = _databaseService.getAllBooks().catchError((error) {
         // Hata durumunda boş liste döndür
-        debugPrint('Kitaplar yüklenirken hata: $error');
+        debugPrint('🚀 LibroLog Debug: Kitaplar yüklenirken hata: $error');
+        debugPrint(
+            '🚀 LibroLog Debug: Hata stack trace: ${StackTrace.current}');
         return <Book>[];
       });
     });
@@ -219,299 +227,286 @@ class _BookScreenState extends State<BookScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Kitap ara...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Kitap ara...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  ),
-                  onChanged: (value) {
+                ToggleButtons(
+                  isSelected: [
+                    _filterStatus == 'Tümü',
+                    _filterStatus == 'Mevcut',
+                    _filterStatus == 'Ödünç Verildi',
+                  ],
+                  onPressed: (index) {
                     setState(() {
-                      _searchQuery = value;
+                      switch (index) {
+                        case 0:
+                          _filterStatus = 'Tümü';
+                          break;
+                        case 1:
+                          _filterStatus = 'Mevcut';
+                          break;
+                        case 2:
+                          _filterStatus = 'Ödünç Verildi';
+                          break;
+                      }
                     });
                   },
-                ),
-                const SizedBox(height: 16),
-                ListView(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    ToggleButtons(
-                      isSelected: [
-                        _filterStatus == 'Tümü',
-                        _filterStatus == 'Mevcut',
-                        _filterStatus == 'Ödünç Verildi',
-                      ],
-                      onPressed: (index) {
-                        setState(() {
-                          switch (index) {
-                            case 0:
-                              _filterStatus = 'Tümü';
-                              break;
-                            case 1:
-                              _filterStatus = 'Mevcut';
-                              break;
-                            case 2:
-                              _filterStatus = 'Ödünç Verildi';
-                              break;
-                          }
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      selectedBorderColor: const Color(0xFF04BF61),
-                      selectedColor: Colors.white,
-                      fillColor: const Color(0xFF04BF61),
-                      color: Colors.black,
-                      borderColor: Colors.grey,
-                      children: const [
-                        Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('Tümü', textAlign: TextAlign.center),
-                          ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('Mevcut', textAlign: TextAlign.center),
-                          ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('Ödünç Verildi',
-                                textAlign: TextAlign.center),
-                          ),
-                        ),
-                      ],
+                  borderRadius: BorderRadius.circular(8),
+                  selectedBorderColor: const Color(0xFF04BF61),
+                  selectedColor: Colors.white,
+                  fillColor: const Color(0xFF04BF61),
+                  color: Colors.black,
+                  borderColor: Colors.grey,
+                  children: const [
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('Tümü', textAlign: TextAlign.center),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('Mevcut', textAlign: TextAlign.center),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('Ödünç Verildi', textAlign: TextAlign.center),
                     ),
                   ],
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 8),
           Expanded(
-            child: _booksFuture == null
-                ? const Center(child: CircularProgressIndicator())
-                : FutureBuilder<List<Book>>(
-                    future: _booksFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+            child: FutureBuilder<List<Book>>(
+              future: _booksFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                size: 64,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Kitaplar yüklenirken hata oluştu',
-                                style: Theme.of(context).textTheme.titleMedium,
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${snapshot.error}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _refreshBooks,
-                                child: const Text('Tekrar Dene'),
-                              ),
-                            ],
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Kitaplar yüklenirken hata oluştu',
+                          style: Theme.of(context).textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${snapshot.error}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _refreshBooks,
+                          child: const Text('Tekrar Dene'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final books = snapshot.data ?? [];
+                final filteredBooks = _filterBooks(books);
+
+                if (filteredBooks.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.book_outlined,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchQuery.isEmpty
+                              ? 'Henüz kitap kaydı bulunmamaktadır.'
+                              : 'Arama sonucu bulunamadı.',
+                          style: Theme.of(context).textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        if (_searchQuery.isEmpty) ...[
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () => _showAddBookDialog(context),
+                            icon: const Icon(Icons.add),
+                            label: const Text('İlk Kitabı Ekle'),
                           ),
-                        );
-                      }
+                        ],
+                      ],
+                    ),
+                  );
+                }
 
-                      final books = snapshot.data ?? [];
-                      final filteredBooks = _filterBooks(books);
-
-                      if (filteredBooks.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.book_outlined,
-                                size: 64,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _searchQuery.isEmpty
-                                    ? 'Henüz kitap kaydı bulunmamaktadır.'
-                                    : 'Arama sonucu bulunamadı.',
-                                style: Theme.of(context).textTheme.titleMedium,
-                                textAlign: TextAlign.center,
-                              ),
-                              if (_searchQuery.isEmpty) ...[
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () => _showAddBookDialog(context),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('İlk Kitabı Ekle'),
-                                ),
-                              ],
-                            ],
-                          ),
-                        );
-                      }
-
-                      return ListView.builder(
-                        itemCount: filteredBooks.length,
-                        itemBuilder: (context, index) {
-                          final book = filteredBooks[index];
-                          return Dismissible(
-                            key: Key(book.id.toString()),
-                            background: Container(
-                              color: Colors.red,
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.only(right: 16),
-                              child: const Icon(
-                                Icons.delete,
-                                color: Colors.white,
-                              ),
-                            ),
-                            secondaryBackground: Container(
-                              color: Colors.blue,
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(left: 16),
-                              child: const Icon(
-                                Icons.edit,
-                                color: Colors.white,
-                              ),
-                            ),
-                            confirmDismiss: (direction) async {
-                              if (direction == DismissDirection.endToStart) {
-                                // Düzenleme işlemi
-                                _showEditBookDialog(context, book);
-                                return false;
-                              } else {
-                                // Silme işlemi
-                                return await showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: const Text('Kitabı Sil'),
-                                      content: Text(
-                                          '${book.title} kitabını silmek istediğinize emin misiniz?'),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(false),
-                                          child: const Text('İptal'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(true),
-                                          child: const Text(
-                                            'Sil',
-                                            style: TextStyle(color: Colors.red),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              }
-                            },
-                            onDismissed: (direction) async {
-                              if (direction == DismissDirection.startToEnd) {
-                                try {
-                                  await _databaseService.deleteBook(book.id!);
-                                  _refreshBooks();
-                                  if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          '${book.title} başarıyla silindi'),
-                                      backgroundColor: Colors.green,
-                                      behavior: SnackBarBehavior.floating,
-                                      margin: const EdgeInsets.all(8),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                  );
-                                } catch (e) {
-                                  if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          'Kitap silinirken bir hata oluştu: $e'),
-                                      backgroundColor: Colors.red,
-                                      behavior: SnackBarBehavior.floating,
-                                      margin: const EdgeInsets.all(8),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                            child: Card(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              child: ListTile(
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.book),
-                                ),
-                                title: Text(book.title),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(book.author),
-                                    Text('ISBN: ${book.isbn}'),
-                                    Text('Barkod: ${book.barcode}'),
-                                  ],
-                                ),
-                                trailing: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: book.isAvailable
-                                        ? Colors.green
-                                        : Colors.red,
-                                    borderRadius: BorderRadius.circular(4),
+                return ListView.builder(
+                  itemCount: filteredBooks.length,
+                  itemBuilder: (context, index) {
+                    final book = filteredBooks[index];
+                    return Dismissible(
+                      key: Key(book.id.toString()),
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(right: 16),
+                        child: const Icon(
+                          Icons.delete,
+                          color: Colors.white,
+                        ),
+                      ),
+                      secondaryBackground: Container(
+                        color: Colors.blue,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(left: 16),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                        ),
+                      ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.endToStart) {
+                          // Düzenleme işlemi
+                          _showEditBookDialog(context, book);
+                          return false;
+                        } else {
+                          // Silme işlemi
+                          return await showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Kitabı Sil'),
+                                content: Text(
+                                    '${book.title} kitabını silmek istediğinize emin misiniz?'),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text('İptal'),
                                   ),
-                                  child: Text(
-                                    book.isAvailable
-                                        ? 'Mevcut'
-                                        : 'Ödünç Verildi',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          BookDetailScreen(book: book),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text(
+                                      'Sil',
+                                      style: TextStyle(color: Colors.red),
                                     ),
-                                  );
-                                },
-                              ),
-                            ),
+                                  ),
+                                ],
+                              );
+                            },
                           );
-                        },
-                      );
-                    },
-                  ),
+                        }
+                      },
+                      onDismissed: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          try {
+                            await _databaseService.deleteBook(book.id!);
+                            _refreshBooks();
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text('${book.title} başarıyla silindi'),
+                                backgroundColor: Colors.green,
+                                behavior: SnackBarBehavior.floating,
+                                margin: const EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Kitap silinirken bir hata oluştu: $e'),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                                margin: const EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.book),
+                          ),
+                          title: Text(book.title),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(book.author),
+                              Text('ISBN: ${book.isbn}'),
+                              Text('Barkod: ${book.barcode}'),
+                            ],
+                          ),
+                          trailing: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color:
+                                  book.isAvailable ? Colors.green : Colors.red,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              book.isAvailable ? 'Mevcut' : 'Ödünç Verildi',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    BookDetailScreen(book: book),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),

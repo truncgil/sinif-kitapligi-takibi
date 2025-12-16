@@ -201,11 +201,22 @@ class DatabaseService {
 
   Future<List<Book>> getAllBooks() async {
     try {
+      debugPrint('🚀 LibroLog Debug: getAllBooks çağrıldı');
       final db = await database;
+      debugPrint('🚀 LibroLog Debug: Veritabanı bağlantısı alındı');
+
       final List<Map<String, dynamic>> maps = await db.query('books');
-      return List.generate(maps.length, (i) => Book.fromMap(maps[i]));
+      debugPrint(
+          '🚀 LibroLog Debug: Kitaplar sorgulandı, ${maps.length} kitap bulundu');
+
+      final books = List.generate(maps.length, (i) => Book.fromMap(maps[i]));
+      debugPrint(
+          '🚀 LibroLog Debug: Kitaplar dönüştürüldü, ${books.length} kitap döndürülüyor');
+
+      return books;
     } catch (e) {
-      debugPrint('Kitaplar getirilirken hata: $e');
+      debugPrint('🚀 LibroLog Debug: Kitaplar getirilirken hata: $e');
+      debugPrint('🚀 LibroLog Debug: Hata stack trace: ${StackTrace.current}');
       // Hata durumunda boş liste döndür
       return <Book>[];
     }
@@ -349,12 +360,20 @@ class DatabaseService {
   }
 
   Future<void> initialize() async {
-    if (_database != null) return;
+    debugPrint('🚀 LibroLog Debug: DatabaseService.initialize() başladı');
+
+    if (_database != null) {
+      debugPrint(
+          '🚀 LibroLog Debug: Veritabanı zaten başlatılmış, işlem atlanıyor');
+      return;
+    }
 
     // Veritabanının daha önce oluşturulup oluşturulmadığını kontrol et
     bool isFirstRun = false;
 
     if (kIsWeb) {
+      debugPrint(
+          '🚀 LibroLog Debug: Web platformu için veritabanı başlatılıyor');
       // Web platformu için SQLite FFI Web kullanımı
       var factory = _databaseFactory ?? databaseFactoryFfiWeb;
       _database = await factory.openDatabase(
@@ -362,6 +381,8 @@ class DatabaseService {
         options: OpenDatabaseOptions(
           version: 1,
           onCreate: (Database db, int version) async {
+            debugPrint(
+                '🚀 LibroLog Debug: Web veritabanı oluşturuluyor (ilk kurulum)');
             isFirstRun = true;
             // Sınıflar tablosu
             await db.execute('''
@@ -411,22 +432,32 @@ class DatabaseService {
 
             // Örnek verileri ekle
             await _insertDemoData(db);
+            debugPrint(
+                '🚀 LibroLog Debug: Web veritabanı oluşturma tamamlandı');
           },
         ),
       );
+      debugPrint('🚀 LibroLog Debug: Web veritabanı başarıyla başlatıldı');
     } else {
+      debugPrint(
+          '🚀 LibroLog Debug: Mobil platform için veritabanı başlatılıyor');
       // Mobil platformlar için normal SQLite kullanımı
       final databasesPath = await getDatabasesPath();
       final path = join(databasesPath, 'library.db');
+      debugPrint('🚀 LibroLog Debug: Veritabanı yolu: $path');
 
       // Veritabanının daha önce var olup olmadığını kontrol et
       bool dbExists = await databaseExists(path);
       isFirstRun = !dbExists;
+      debugPrint(
+          '🚀 LibroLog Debug: Veritabanı mevcut mu: $dbExists, İlk kurulum mu: $isFirstRun');
 
       _database = await openDatabase(
         path,
         version: 1,
         onCreate: (Database db, int version) async {
+          debugPrint(
+              '🚀 LibroLog Debug: Mobil veritabanı oluşturuluyor (ilk kurulum)');
           // Sınıflar tablosu
           await db.execute('''
             CREATE TABLE class_rooms (
@@ -475,13 +506,20 @@ class DatabaseService {
 
           // Örnek verileri ekle
           await _insertDemoData(db);
+          debugPrint(
+              '🚀 LibroLog Debug: Mobil veritabanı oluşturma tamamlandı');
         },
       );
+      debugPrint('🚀 LibroLog Debug: Mobil veritabanı başarıyla başlatıldı');
     }
+
+    debugPrint('🚀 LibroLog Debug: DatabaseService.initialize() tamamlandı');
   }
 
   /// Örnek demo verileri ekler (sadece ilk kurulumda çalışır)
   Future<void> _insertDemoData(Database db) async {
+    debugPrint('🚀 LibroLog Debug: Demo veriler ekleniyor...');
+
     // Sınıfları ekle
     List<Map<String, dynamic>> classRooms = [
       {'name': '1-A', 'description': '1. Sınıf A Şubesi'},
@@ -493,6 +531,7 @@ class DatabaseService {
     for (var classRoom in classRooms) {
       await db.insert('class_rooms', classRoom);
     }
+    debugPrint('🚀 LibroLog Debug: ${classRooms.length} sınıf eklendi');
 
     // Öğrencileri ekle
     List<Map<String, dynamic>> students = [
@@ -537,6 +576,7 @@ class DatabaseService {
     for (var student in students) {
       await db.insert('students', student);
     }
+    debugPrint('🚀 LibroLog Debug: ${students.length} öğrenci eklendi');
 
     // Kitapları ekle
     List<Map<String, dynamic>> books = [
@@ -608,6 +648,8 @@ class DatabaseService {
     for (var book in books) {
       await db.insert('books', book);
     }
+    debugPrint('🚀 LibroLog Debug: ${books.length} kitap eklendi');
+    debugPrint('🚀 LibroLog Debug: Demo veriler ekleme tamamlandı');
   }
 
   // Aktif ödünç kaydını kitap ID'sine göre getir
