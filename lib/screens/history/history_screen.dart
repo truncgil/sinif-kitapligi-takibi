@@ -5,6 +5,7 @@ import '../../models/borrow_record.dart';
 import '../../models/student.dart';
 import '../../models/book.dart';
 import '../../services/database/database_service.dart';
+import '../../constants/colors.dart';
 
 /// Ödünç alma geçmişi ekranı
 class HistoryScreen extends StatefulWidget {
@@ -35,7 +36,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Geçmiş'),
+        backgroundColor: AppColors.history,
+        centerTitle: true,
+        title: const Text(
+          'Geçmiş',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: FutureBuilder<List<BorrowRecord>>(
         future: _recordsFuture,

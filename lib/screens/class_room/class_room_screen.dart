@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/class_room.dart';
 import '../../services/database/database_service.dart';
+import '../../screens/student/student_screen.dart';
+import '../../constants/colors.dart';
 
 /// Sınıf işlemleri ekranı
 class ClassRoomScreen extends StatefulWidget {
@@ -14,6 +16,7 @@ class ClassRoomScreen extends StatefulWidget {
 class _ClassRoomScreenState extends State<ClassRoomScreen> {
   late Future<List<ClassRoom>> _classRoomsFuture;
   late DatabaseService _databaseService;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -26,6 +29,18 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
     setState(() {
       _classRoomsFuture = _databaseService.getAllClassRooms();
     });
+  }
+
+  List<ClassRoom> _filterClassRooms(List<ClassRoom> classRooms) {
+    if (_searchQuery.isEmpty) return classRooms;
+
+    return classRooms.where((classRoom) {
+      final name = classRoom.name.toLowerCase();
+      final description = (classRoom.description ?? '').toLowerCase();
+      final query = _searchQuery.toLowerCase();
+
+      return name.contains(query) || description.contains(query);
+    }).toList();
   }
 
   void _showSuccessMessage(String message) {
@@ -62,59 +77,179 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sınıflar'),
+        backgroundColor: AppColors.classRoom,
+        centerTitle: true,
+        title: const Text(
+          'Sınıflar',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
-      body: FutureBuilder<List<ClassRoom>>(
-        future: _classRoomsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Hata: ${snapshot.error}'));
-          }
-
-          final classRooms = snapshot.data ?? [];
-
-          if (classRooms.isEmpty) {
-            return const Center(
-              child: Text('Henüz sınıf kaydı bulunmamaktadır.'),
-            );
-          }
-
-          return ListView.builder(
-            itemCount: classRooms.length,
-            itemBuilder: (context, index) {
-              final classRoom = classRooms[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.class_),
-                  ),
-                  title: Text(classRoom.name),
-                  subtitle: Text(classRoom.description ?? ''),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () =>
-                            _showEditClassRoomDialog(context, classRoom),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () =>
-                            _showDeleteClassRoomDialog(context, classRoom),
-                      ),
-                    ],
-                  ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Sınıf Ara...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              );
-            },
-          );
-        },
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<ClassRoom>>(
+              future: _classRoomsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Hata: ${snapshot.error}'));
+                }
+
+                final classRooms = snapshot.data ?? [];
+                final filteredClassRooms = _filterClassRooms(classRooms);
+
+                if (filteredClassRooms.isEmpty) {
+                  return const Center(
+                    child: Text('Arama kriterlerine uygun sınıf bulunamadı.'),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: filteredClassRooms.length,
+                  itemBuilder: (context, index) {
+                    final classRoom = filteredClassRooms[index];
+                    return Dismissible(
+                      key: Key(classRoom.id.toString()),
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(right: 16),
+                        child: const Icon(
+                          Icons.delete,
+                          color: Colors.white,
+                        ),
+                      ),
+                      secondaryBackground: Container(
+                        color: Colors.blue,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(left: 16),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                        ),
+                      ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.endToStart) {
+                          // Düzenleme işlemi
+                          _showEditClassRoomDialog(context, classRoom);
+                          return false;
+                        } else {
+                          // Silme işlemi
+                          return await showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Sınıf Silme'),
+                                content: Text(
+                                    '${classRoom.name} sınıfını silmek istediğinize emin misiniz?'),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text('İptal'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text(
+                                      'Sil',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        }
+                      },
+                      onDismissed: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          try {
+                            await _databaseService
+                                .deleteClassRoom(classRoom.id!);
+                            _refreshClassRooms();
+                            if (!mounted) return;
+                            _showSuccessMessage(
+                                '${classRoom.name} sınıfı başarıyla silindi.');
+                          } catch (e) {
+                            if (!mounted) return;
+                            _showErrorMessage(
+                                'Sınıf silinirken bir hata oluştu: $e');
+                          }
+                        }
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.class_),
+                          ),
+                          title: Text(classRoom.name),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(classRoom.description ?? ''),
+                              FutureBuilder<int>(
+                                future: _databaseService
+                                    .getStudentCountByClassRoom(classRoom.name),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return const Text('Yükleniyor...');
+                                  }
+                                  final count = snapshot.data ?? 0;
+                                  return Text(
+                                    '$count Öğrenci',
+                                    style: TextStyle(
+                                      color:
+                                          count > 0 ? Colors.blue : Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    StudentScreen(classRoom: classRoom),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddClassRoomDialog(context),
@@ -176,40 +311,6 @@ class _ClassRoomScreenState extends State<ClassRoomScreen> {
               }
             },
             child: const Text('Kaydet'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showDeleteClassRoomDialog(
-      BuildContext context, ClassRoom classRoom) async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sınıf Silme'),
-        content: Text(
-            '${classRoom.name} sınıfını silmek istediğinize emin misiniz?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await _databaseService.deleteClassRoom(classRoom.id!);
-                _refreshClassRooms();
-
-                if (!mounted) return;
-                Navigator.pop(context);
-                _showSuccessMessage('Sınıf başarıyla silindi.');
-              } catch (e) {
-                _showErrorMessage('Sınıf silinirken bir hata oluştu: $e');
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Sil'),
           ),
         ],
       ),

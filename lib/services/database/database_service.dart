@@ -6,6 +6,8 @@ import '../../models/student.dart';
 import '../../models/book.dart';
 import '../../models/borrow_record.dart';
 import '../../models/class_room.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 /// Veritabanı işlemlerini yöneten servis sınıfı
 class DatabaseService {
@@ -198,9 +200,26 @@ class DatabaseService {
   }
 
   Future<List<Book>> getAllBooks() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('books');
-    return List.generate(maps.length, (i) => Book.fromMap(maps[i]));
+    try {
+      debugPrint('🚀 LibroLog Debug: getAllBooks çağrıldı');
+      final db = await database;
+      debugPrint('🚀 LibroLog Debug: Veritabanı bağlantısı alındı');
+
+      final List<Map<String, dynamic>> maps = await db.query('books');
+      debugPrint(
+          '🚀 LibroLog Debug: Kitaplar sorgulandı, ${maps.length} kitap bulundu');
+
+      final books = List.generate(maps.length, (i) => Book.fromMap(maps[i]));
+      debugPrint(
+          '🚀 LibroLog Debug: Kitaplar dönüştürüldü, ${books.length} kitap döndürülüyor');
+
+      return books;
+    } catch (e) {
+      debugPrint('🚀 LibroLog Debug: Kitaplar getirilirken hata: $e');
+      debugPrint('🚀 LibroLog Debug: Hata stack trace: ${StackTrace.current}');
+      // Hata durumunda boş liste döndür
+      return <Book>[];
+    }
   }
 
   Future<Book?> getBookByBarcode(String barcode) async {
@@ -341,9 +360,20 @@ class DatabaseService {
   }
 
   Future<void> initialize() async {
-    if (_database != null) return;
+    debugPrint('🚀 LibroLog Debug: DatabaseService.initialize() başladı');
+
+    if (_database != null) {
+      debugPrint(
+          '🚀 LibroLog Debug: Veritabanı zaten başlatılmış, işlem atlanıyor');
+      return;
+    }
+
+    // Veritabanının daha önce oluşturulup oluşturulmadığını kontrol et
+    bool isFirstRun = false;
 
     if (kIsWeb) {
+      debugPrint(
+          '🚀 LibroLog Debug: Web platformu için veritabanı başlatılıyor');
       // Web platformu için SQLite FFI Web kullanımı
       var factory = _databaseFactory ?? databaseFactoryFfiWeb;
       _database = await factory.openDatabase(
@@ -351,6 +381,9 @@ class DatabaseService {
         options: OpenDatabaseOptions(
           version: 1,
           onCreate: (Database db, int version) async {
+            debugPrint(
+                '🚀 LibroLog Debug: Web veritabanı oluşturuluyor (ilk kurulum)');
+            isFirstRun = true;
             // Sınıflar tablosu
             await db.execute('''
               CREATE TABLE class_rooms (
@@ -396,18 +429,35 @@ class DatabaseService {
                 FOREIGN KEY (bookId) REFERENCES books (id)
               )
             ''');
+
+            // Örnek verileri ekle
+            await _insertDemoData(db);
+            debugPrint(
+                '🚀 LibroLog Debug: Web veritabanı oluşturma tamamlandı');
           },
         ),
       );
+      debugPrint('🚀 LibroLog Debug: Web veritabanı başarıyla başlatıldı');
     } else {
+      debugPrint(
+          '🚀 LibroLog Debug: Mobil platform için veritabanı başlatılıyor');
       // Mobil platformlar için normal SQLite kullanımı
       final databasesPath = await getDatabasesPath();
       final path = join(databasesPath, 'library.db');
+      debugPrint('🚀 LibroLog Debug: Veritabanı yolu: $path');
+
+      // Veritabanının daha önce var olup olmadığını kontrol et
+      bool dbExists = await databaseExists(path);
+      isFirstRun = !dbExists;
+      debugPrint(
+          '🚀 LibroLog Debug: Veritabanı mevcut mu: $dbExists, İlk kurulum mu: $isFirstRun');
 
       _database = await openDatabase(
         path,
         version: 1,
         onCreate: (Database db, int version) async {
+          debugPrint(
+              '🚀 LibroLog Debug: Mobil veritabanı oluşturuluyor (ilk kurulum)');
           // Sınıflar tablosu
           await db.execute('''
             CREATE TABLE class_rooms (
@@ -453,8 +503,359 @@ class DatabaseService {
               FOREIGN KEY (bookId) REFERENCES books (id)
             )
           ''');
+
+          // Örnek verileri ekle
+          await _insertDemoData(db);
+          debugPrint(
+              '🚀 LibroLog Debug: Mobil veritabanı oluşturma tamamlandı');
         },
       );
+      debugPrint('🚀 LibroLog Debug: Mobil veritabanı başarıyla başlatıldı');
+    }
+
+    debugPrint('🚀 LibroLog Debug: DatabaseService.initialize() tamamlandı');
+  }
+
+  /// Örnek demo verileri ekler (sadece ilk kurulumda çalışır)
+  Future<void> _insertDemoData(Database db) async {
+    debugPrint('🚀 LibroLog Debug: Demo veriler ekleniyor...');
+
+    // Sınıfları ekle
+    List<Map<String, dynamic>> classRooms = [
+      {'name': '1-A', 'description': '1. Sınıf A Şubesi'},
+      {'name': '2-B', 'description': '2. Sınıf B Şubesi'},
+      {'name': '3-C', 'description': '3. Sınıf C Şubesi'},
+      {'name': '4-A', 'description': '4. Sınıf A Şubesi'},
+    ];
+
+    for (var classRoom in classRooms) {
+      await db.insert('class_rooms', classRoom);
+    }
+    debugPrint('🚀 LibroLog Debug: ${classRooms.length} sınıf eklendi');
+
+    // Öğrencileri ekle
+    List<Map<String, dynamic>> students = [
+      {
+        'name': 'Ahmet',
+        'surname': 'Yılmaz',
+        'studentNumber': '1001',
+        'className': '1-A'
+      },
+      {
+        'name': 'Ayşe',
+        'surname': 'Kaya',
+        'studentNumber': '1002',
+        'className': '1-A'
+      },
+      {
+        'name': 'Mehmet',
+        'surname': 'Demir',
+        'studentNumber': '2001',
+        'className': '2-B'
+      },
+      {
+        'name': 'Zeynep',
+        'surname': 'Çelik',
+        'studentNumber': '2002',
+        'className': '2-B'
+      },
+      {
+        'name': 'Muhammed Reva',
+        'surname': 'Tunç',
+        'studentNumber': '3001',
+        'className': '3-C'
+      },
+      {
+        'name': 'Damlanur Sevgi',
+        'surname': 'Tunç',
+        'studentNumber': '4001',
+        'className': '4-A'
+      },
+    ];
+
+    for (var student in students) {
+      await db.insert('students', student);
+    }
+    debugPrint('🚀 LibroLog Debug: ${students.length} öğrenci eklendi');
+
+    // Kitapları ekle
+    List<Map<String, dynamic>> books = [
+      {
+        'title': 'Adobe Premiere Pro ile Montaj Teknikleri',
+        'author': 'Ümit Tunç',
+        'isbn': '9789750719451',
+        'barcode': 'KP002432',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Küçük Prens',
+        'author': 'Antoine de Saint-Exupéry',
+        'isbn': '9789750719981',
+        'barcode': 'KP001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Şeker Portakalı',
+        'author': 'Jose Mauro De Vasconcelos',
+        'isbn': '9789750726477',
+        'barcode': 'SP001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Küçük Kara Balık',
+        'author': 'Samed Behrengi',
+        'isbn': '9789944717519',
+        'barcode': 'KKB001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Martı Jonathan Livingston',
+        'author': 'Richard Bach',
+        'isbn': '9789754587272',
+        'barcode': 'MJL001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Beyaz Diş',
+        'author': 'Jack London',
+        'isbn': '9789750736377',
+        'barcode': 'BD001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Simyacı',
+        'author': 'Paulo Coelho',
+        'isbn': '9789750726538',
+        'barcode': 'SM001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Hayvan Çiftliği',
+        'author': 'George Orwell',
+        'isbn': '9789753638029',
+        'barcode': 'HC001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Fareler ve İnsanlar',
+        'author': 'John Steinbeck',
+        'isbn': '9789753638043',
+        'barcode': 'FI001',
+        'isAvailable': 1
+      },
+    ];
+
+    for (var book in books) {
+      await db.insert('books', book);
+    }
+    debugPrint('🚀 LibroLog Debug: ${books.length} kitap eklendi');
+    debugPrint('🚀 LibroLog Debug: Demo veriler ekleme tamamlandı');
+  }
+
+  // Aktif ödünç kaydını kitap ID'sine göre getir
+  Future<BorrowRecord?> getActiveBorrowRecordByBookId(int bookId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'borrow_records',
+      where: 'bookId = ? AND isReturned = 0',
+      whereArgs: [bookId],
+    );
+    if (maps.isEmpty) return null;
+    return BorrowRecord.fromMap(maps.first);
+  }
+
+  // Ödünç kaydını iade edildi olarak güncelle
+  Future<void> updateBorrowRecordAsReturned(int borrowRecordId) async {
+    final db = await database;
+    await db.update(
+      'borrow_records',
+      {
+        'returnDate': DateTime.now().toIso8601String(),
+        'isReturned': 1,
+      },
+      where: 'id = ?',
+      whereArgs: [borrowRecordId],
+    );
+  }
+
+  Future<List<BorrowRecord>> getBorrowRecordsByStudentId(int studentId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'borrow_records',
+      where: 'studentId = ? AND isReturned = 0',
+      whereArgs: [studentId],
+    );
+    return List.generate(maps.length, (i) => BorrowRecord.fromMap(maps[i]));
+  }
+
+  Future<int> getActiveBorrowCountByStudentId(int studentId) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM borrow_records 
+      WHERE studentId = ? AND isReturned = 0
+    ''', [studentId]);
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<int> getStudentCountByClassRoom(String className) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM students 
+      WHERE className = ?
+    ''', [className]);
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  /// Örnek 20 kitap ekler
+  Future<void> insertSampleBooks() async {
+    final db = await database;
+    List<Map<String, dynamic>> books = [
+      {
+        'title': 'Suç ve Ceza',
+        'author': 'Fyodor Dostoyevski',
+        'isbn': '9789750719452',
+        'barcode': 'SC001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Sefiller',
+        'author': 'Victor Hugo',
+        'isbn': '9789750719453',
+        'barcode': 'SF001',
+        'isAvailable': 1
+      },
+      {
+        'title': '1984',
+        'author': 'George Orwell',
+        'isbn': '9789750719454',
+        'barcode': '1984001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Dönüşüm',
+        'author': 'Franz Kafka',
+        'isbn': '9789750719455',
+        'barcode': 'DN001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Yüzüklerin Efendisi',
+        'author': 'J.R.R. Tolkien',
+        'isbn': '9789750719456',
+        'barcode': 'YE001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Saatleri Ayarlama Enstitüsü',
+        'author': 'Ahmet Hamdi Tanpınar',
+        'isbn': '9789750719457',
+        'barcode': 'SAE001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Tutunamayanlar',
+        'author': 'Oğuz Atay',
+        'isbn': '9789750719458',
+        'barcode': 'TT001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Kürk Mantolu Madonna',
+        'author': 'Sabahattin Ali',
+        'isbn': '9789750719459',
+        'barcode': 'KMM001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'İnce Memed',
+        'author': 'Yaşar Kemal',
+        'isbn': '9789750719460',
+        'barcode': 'IM001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Çalıkuşu',
+        'author': 'Reşat Nuri Güntekin',
+        'isbn': '9789750719461',
+        'barcode': 'CK001',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Fareler ve İnsanlar',
+        'author': 'John Steinbeck',
+        'isbn': '9789750719462',
+        'barcode': 'FI002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Beyaz Diş',
+        'author': 'Jack London',
+        'isbn': '9789750719463',
+        'barcode': 'BD002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Simyacı',
+        'author': 'Paulo Coelho',
+        'isbn': '9789750719464',
+        'barcode': 'SM002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Küçük Prens',
+        'author': 'Antoine de Saint-Exupéry',
+        'isbn': '9789750719465',
+        'barcode': 'KP002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Şeker Portakalı',
+        'author': 'Jose Mauro De Vasconcelos',
+        'isbn': '9789750719466',
+        'barcode': 'SP002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Küçük Kara Balık',
+        'author': 'Samed Behrengi',
+        'isbn': '9789750719467',
+        'barcode': 'KKB002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Martı Jonathan Livingston',
+        'author': 'Richard Bach',
+        'isbn': '9789750719468',
+        'barcode': 'MJL002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Hayvan Çiftliği',
+        'author': 'George Orwell',
+        'isbn': '9789750719469',
+        'barcode': 'HC002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Dönüşüm',
+        'author': 'Franz Kafka',
+        'isbn': '9789750719470',
+        'barcode': 'DN002',
+        'isAvailable': 1
+      },
+      {
+        'title': 'Suç ve Ceza',
+        'author': 'Fyodor Dostoyevski',
+        'isbn': '9789750719471',
+        'barcode': 'SC002',
+        'isAvailable': 1
+      }
+    ];
+
+    for (var book in books) {
+      await db.insert('books', book);
     }
   }
 }

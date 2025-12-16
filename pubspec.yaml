@@ -1,4 +1,4 @@
-name: sinif_kitapligi_kutuphanesi
+name: LibroLog
 description: "Flutter ile geliştirilmiş offline çalışan Kitap Takibi yönetim uygulaması"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.6+21
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
@@ -36,12 +36,20 @@ dependencies:
   cupertino_icons: ^1.0.2
   sqflite: ^2.3.0
   sqflite_common_ffi: ^2.3.2
-  sqflite_common_ffi_web: ^0.4.2
+  sqflite_common_ffi_web: ^0.4.2+3
   path: ^1.8.3
   provider: ^6.0.5
   intl: ^0.18.1
-  flutter_launcher_icons: ^0.14.3
+  flutter_launcher_icons: ^0.13.1
   mobile_scanner: ^7.0.0
+  path_provider: ^2.1.5
+  permission_handler: ^12.0.0+1
+  in_app_purchase: ^3.1.13
+  in_app_purchase_storekit: ^0.3.11 # iOS için StoreKit desteği
+  shared_preferences: ^2.2.2
+  share_plus: ^11.0.0
+  receive_intent: ^0.2.7
+  # flutter_barcode_scanner: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +61,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -66,8 +75,9 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+    - assets/icons/librolog.png
+    - assets/icons/icon2.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -96,21 +106,23 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-flutter_launcher_icons:
+flutter_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icons/icon.png"
+  image_path: "assets/icons/icon2_no_alpha.png"
   remove_alpha_ios: true
+  adaptive_icon_background: "#A8FAD2"
+  adaptive_icon_foreground: "assets/icons/icon2.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
   web:
     generate: true
-    image_path: "assets/icons/icon.png"
-    background_color: "#38cfba"
-    theme_color: "#38cfba"
+    image_path: "assets/icons/icon2.png"
+    background_color: "#A8FAD2"
+    theme_color: "#A8FAD2"
   windows:
     generate: true
-    image_path: "assets/icons/icon.png"
+    image_path: "assets/icons/icon2.png"
     icon_size: 48 # min:48, max:256, default: 48
   macos:
     generate: true
-    image_path: "assets/icons/icon.png"
+    image_path: "assets/icons/icon2.png"

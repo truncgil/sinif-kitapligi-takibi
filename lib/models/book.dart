@@ -32,11 +32,39 @@ class Book {
   factory Book.fromMap(Map<String, dynamic> map) {
     return Book(
       id: map['id'] as int?,
-      title: map['title'] as String,
-      author: map['author'] as String,
-      isbn: map['isbn'] as String,
-      barcode: map['barcode'] as String,
-      isAvailable: (map['isAvailable'] as int) == 1,
+      title: (map['title'] as String?) ?? '',
+      author: (map['author'] as String?) ?? '',
+      isbn: (map['isbn'] as String?) ?? '',
+      barcode: (map['barcode'] as String?) ?? '',
+      isAvailable: (map['isAvailable'] as int?) == 1,
     );
   }
+
+  /// Belirli özelliklerini değiştirerek yeni bir Book nesnesi oluşturur
+  Book copyWith({
+    int? id,
+    String? title,
+    String? author,
+    String? isbn,
+    String? barcode,
+    bool? isAvailable,
+  }) {
+    return Book(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      author: author ?? this.author,
+      isbn: isbn ?? this.isbn,
+      barcode: barcode ?? this.barcode,
+      isAvailable: isAvailable ?? this.isAvailable,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Book && other.barcode == barcode;
+  }
+
+  @override
+  int get hashCode => barcode.hashCode;
 }
