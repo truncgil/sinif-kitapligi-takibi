@@ -5,15 +5,14 @@ import '../history/history_screen.dart';
 import '../class_room/class_room_screen.dart';
 import '../statistics/statistics_screen.dart';
 import '../borrow/borrow_screen.dart';
-import '../backup/backup_screen.dart';
 import '../../models/book.dart';
 import '../../services/database/database_service.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../../providers/library_provider.dart';
 import '../barcode_scanner/barcode_scanner_page.dart';
 import '../../constants/colors.dart';
 import '../../providers/book_limit_provider.dart';
+import '../../services/export/excel_export_service.dart';
 
 /// Ana ekran
 class HomeScreen extends StatefulWidget {
@@ -24,6 +23,44 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Future<void> _exportData() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final dbService = Provider.of<DatabaseService>(context, listen: false);
+      final exportService = ExcelExportService(dbService);
+      await exportService.exportAllData();
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Veriler Excel dosyası olarak hazırlandı.'),
+          backgroundColor: const Color(0xFF04BF61),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hata: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -304,6 +341,12 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               MaterialPageRoute(builder: (_) => const StatisticsScreen()),
             ),
+      },
+      {
+        'title': 'Excel\'e Aktar',
+        'icon': Icons.file_download,
+        'color': const Color(0xFF1D6F42), // Excel yeşili
+        'onTap': _exportData,
       },
       /*
       {

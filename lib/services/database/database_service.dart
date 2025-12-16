@@ -718,6 +718,27 @@ class DatabaseService {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
+  Future<List<Map<String, dynamic>>> getAllBorrowingHistoryForExport() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT 
+        s.name, 
+        s.surname, 
+        s.studentNumber, 
+        s.className,
+        b.title, 
+        b.author, 
+        b.barcode,
+        br.borrowDate, 
+        br.returnDate, 
+        br.isReturned
+      FROM borrow_records br
+      JOIN students s ON br.studentId = s.id
+      JOIN books b ON br.bookId = b.id
+      ORDER BY br.borrowDate DESC
+    ''');
+  }
+
   /// Örnek 20 kitap ekler
   Future<void> insertSampleBooks() async {
     final db = await database;
