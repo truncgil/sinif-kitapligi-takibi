@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/database/database_service.dart';
 import '../../constants/colors.dart';
+import '../../models/book.dart';
 
 class StatisticsScreen extends StatelessWidget {
   const StatisticsScreen({super.key});
@@ -59,6 +60,17 @@ class StatisticsScreen extends StatelessWidget {
                 icon: Icons.class_,
                 color: Colors.purple,
               ),
+              GestureDetector(
+                onTap: () {
+                  _showNeverBorrowedBooks(context, dbService);
+                },
+                child: _StatisticCard(
+                  title: 'Hiç Okunmayan Kitaplar',
+                  value: stats['neverBorrowedBooks']?.toString() ?? '0',
+                  icon: Icons.menu_book,
+                  color: Colors.red,
+                ),
+              ),
             ],
           );
         },
@@ -66,17 +78,93 @@ class StatisticsScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _showNeverBorrowedBooks(
+      BuildContext context, DatabaseService dbService) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final books = await dbService.getNeverBorrowedBooks();
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Hiç Okunmayan Kitaplar (${books.length})',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const Divider(),
+                Expanded(
+                  child: books.isEmpty
+                      ? const Center(
+                          child: Text('Tüm kitaplar en az bir kez okunmuş! 🎉'),
+                        )
+                      : ListView.builder(
+                          controller: scrollController,
+                          itemCount: books.length,
+                          itemBuilder: (context, index) {
+                            final book = books[index];
+                            return ListTile(
+                              leading: const CircleAvatar(
+                                backgroundColor: Colors.red,
+                                child: Icon(Icons.book, color: Colors.white),
+                              ),
+                              title: Text(book.title),
+                              subtitle: Text(book.author),
+                              trailing: Text(book.barcode),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hata: $e')),
+      );
+    }
+  }
+
   Future<Map<String, dynamic>> _getStatistics(DatabaseService dbService) async {
     final totalBooks = await dbService.getAllBooks();
     final totalStudents = await dbService.getAllStudents();
     final borrowedBooks = await dbService.getCurrentlyBorrowedBooks();
     final totalClasses = await dbService.getAllClassRooms();
+    final neverBorrowedBooks = await dbService.getNeverBorrowedBooks();
 
     return {
       'totalBooks': totalBooks.length,
       'totalStudents': totalStudents.length,
       'borrowedBooks': borrowedBooks.length,
       'totalClasses': totalClasses.length,
+      'neverBorrowedBooks': neverBorrowedBooks.length,
     };
   }
 }

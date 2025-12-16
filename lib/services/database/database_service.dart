@@ -785,6 +785,17 @@ class DatabaseService {
     ''', [bookId]);
   }
 
+  Future<List<Book>> getNeverBorrowedBooks() async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT b.*
+      FROM books b
+      LEFT JOIN borrow_records br ON b.id = br.bookId
+      WHERE br.id IS NULL
+    ''');
+    return List.generate(result.length, (i) => Book.fromMap(result[i]));
+  }
+
   /// Örnek 20 kitap ekler
   Future<void> insertSampleBooks() async {
     final db = await database;
