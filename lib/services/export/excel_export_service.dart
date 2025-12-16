@@ -25,6 +25,21 @@ class ExcelExportService {
     }
   }
 
+  Future<void> exportBookData(int bookId, String bookTitle) async {
+    try {
+      final data =
+          await _databaseService.getBookBorrowingHistoryForExport(bookId);
+
+      if (data.isEmpty) {
+        throw Exception('Bu kitap için dışa aktarılacak veri bulunamadı.');
+      }
+
+      await _createAndShareExcel(data, 'Librolog_$bookTitle');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> exportAllData() async {
     try {
       // 1. Verileri al

@@ -5,8 +5,10 @@ import '../../models/student.dart';
 import '../../models/borrow_record.dart';
 import '../../services/database/database_service.dart';
 import '../../constants/colors.dart';
-import '../student/student_screen.dart';
 import '../borrow/borrow_screen.dart';
+
+import '../../services/export/excel_export_service.dart';
+import '../../widgets/common/toast_message.dart';
 
 /// Kitap detay ekranı
 class BookDetailScreen extends StatefulWidget {
@@ -29,6 +31,40 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     _book = widget.book;
   }
 
+  Future<void> _exportBookData() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final dbService = Provider.of<DatabaseService>(context, listen: false);
+      final exportService = ExcelExportService(dbService);
+      
+      await exportService.exportBookData(widget.book.id!, widget.book.title);
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      _showSuccessMessage('Kitap verileri Excel dosyası olarak hazırlandı.');
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      _showErrorMessage('Hata: $e');
+    }
+  }
+
+  void _showErrorMessage(String message) {
+    if (!mounted) return;
+    showToastMessage(context, message: message, isSuccess: false);
+  }
+
+  void _showSuccessMessage(String message) {
+    if (!mounted) return;
+    showToastMessage(context, message: message, isSuccess: true);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,6 +75,13 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           'Kitap Detayları',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            onPressed: _exportBookData,
+            icon: const Icon(Icons.file_download),
+            tooltip: 'Excel\'e Aktar',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -184,12 +227,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Kitap durumu güncellenirken hata oluştu: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorMessage('Kitap durumu güncellenirken hata oluştu: $e');
     }
   }
 
@@ -201,12 +239,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           await _databaseService.getActiveBorrowRecordByBookId(_book.id!);
 
       if (borrowRecord == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kitap ödünç kaydı bulunamadı'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorMessage('Kitap ödünç kaydı bulunamadı');
         return;
       }
 
@@ -264,20 +297,10 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
 
       // Bildirim göster
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kitap başarıyla iade edildi'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      _showSuccessMessage('Kitap başarıyla iade edildi');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('İşlem sırasında bir hata oluştu: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorMessage('İşlem sırasında bir hata oluştu: $e');
     }
   }
 }
