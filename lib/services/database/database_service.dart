@@ -826,6 +826,27 @@ class DatabaseService {
     return result;
   }
 
+  Future<List<Map<String, dynamic>>> getMostReadingStudentsThisMonth(
+      {int limit = 10}) async {
+    final db = await database;
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1).toIso8601String();
+    // Bir sonraki ayın ilk günü (bu ayın sonuna kadar olanları almak için < kullanacağız)
+    final endOfMonth = DateTime(now.year, now.month + 1, 1).toIso8601String();
+
+    final result = await db.rawQuery('''
+      SELECT s.*, COUNT(br.id) as readCount
+      FROM students s
+      JOIN borrow_records br ON s.id = br.studentId
+      WHERE br.borrowDate >= ? AND br.borrowDate < ?
+      GROUP BY s.id
+      ORDER BY readCount DESC
+      LIMIT ?
+    ''', [startOfMonth, endOfMonth, limit]);
+
+    return result;
+  }
+
   /// Örnek 20 kitap ekler
   Future<void> insertSampleBooks() async {
     final db = await database;
